@@ -29,10 +29,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
       <div
         className={cn(
-          "max-w-[96%] rounded-[26px] px-4 py-4 text-sm leading-7 shadow-sm md:max-w-[88%] md:px-5",
+          "max-w-[96%] px-1 py-0 text-sm leading-7 md:max-w-[92%]",
           isAssistant
-            ? "border border-[#ebe2d7] bg-[linear-gradient(180deg,#fffdfa_0%,#f7f2ea_100%)] text-text-200"
-            : "border border-[#c9dbee] bg-[linear-gradient(180deg,#eef6ff_0%,#dfeefe_100%)] text-[#1f3c5b] shadow-[0_20px_40px_-32px_rgba(106,149,196,0.7)]",
+            ? "text-text-200"
+            : "rounded-[24px] border border-[#c9dbee] bg-[linear-gradient(180deg,#eef6ff_0%,#dfeefe_100%)] px-4 py-4 text-[#1f3c5b] shadow-[0_20px_40px_-32px_rgba(106,149,196,0.7)] md:px-5",
         )}
       >
         {!!message.meta?.pasted && (

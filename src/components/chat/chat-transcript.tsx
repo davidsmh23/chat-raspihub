@@ -16,8 +16,8 @@ export function ChatTranscript({ messages, isSending }: ChatTranscriptProps) {
   }, [messages, isSending]);
 
   return (
-    <div className="custom-scrollbar flex h-full w-full flex-col overflow-y-auto px-2 py-1 md:px-4 md:py-2">
-      <div className="flex flex-col gap-6">
+    <div className="custom-scrollbar h-full overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-7 px-2 py-5 md:px-4 md:py-7">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
@@ -28,9 +28,8 @@ export function ChatTranscript({ messages, isSending }: ChatTranscriptProps) {
             Generando respuesta...
           </div>
         ) : null}
+        <div ref={bottomRef} />
       </div>
-
-      <div ref={bottomRef} />
     </div>
   );
 }
