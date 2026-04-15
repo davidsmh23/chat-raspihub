@@ -16,17 +16,19 @@ export function ChatTranscript({ messages, isSending }: ChatTranscriptProps) {
   }, [messages, isSending]);
 
   return (
-    <div className="custom-scrollbar flex min-h-[420px] flex-1 flex-col gap-5 overflow-y-auto px-0 pb-4">
-      {messages.map((message) => (
-        <ChatMessage key={message.id} message={message} />
-      ))}
+    <div className="custom-scrollbar flex h-full w-full flex-col overflow-y-auto px-2 py-1 md:px-4 md:py-2">
+      <div className="flex flex-col gap-6">
+        {messages.map((message) => (
+          <ChatMessage key={message.id} message={message} />
+        ))}
 
-      {isSending ? (
-        <div className="flex max-w-[160px] items-center gap-2 rounded-full bg-bg-200 px-4 py-3 text-sm text-text-400">
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
-          Generando respuesta...
-        </div>
-      ) : null}
+        {isSending ? (
+          <div className="flex max-w-[190px] items-center gap-2 rounded-full border border-[#d8e4f3] bg-[#edf4fb] px-4 py-3 text-sm text-text-400">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
+            Generando respuesta...
+          </div>
+        ) : null}
+      </div>
 
       <div ref={bottomRef} />
     </div>

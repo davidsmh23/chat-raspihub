@@ -95,12 +95,16 @@
   }
 
   html {
-    @apply antialiased;
+    @apply h-full antialiased;
     color-scheme: light;
   }
 
   body {
-    @apply min-h-screen bg-background text-foreground font-sans;
+    @apply h-full overflow-hidden bg-background text-foreground font-sans;
+  }
+
+  #root {
+    @apply h-full;
   }
 
   button,

@@ -14,54 +14,48 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <article
       className={cn(
-        "max-w-[92%] px-0 py-3 text-sm leading-7 transition-colors md:max-w-[80%]",
-        isAssistant
-          ? "text-text-200"
-          : "ml-auto max-w-[88%] rounded-[22px] bg-[linear-gradient(135deg,#1f1e1d_0%,#35312b_100%)] px-4 py-3 text-bg-0 md:px-5",
+        "flex w-full flex-col gap-2",
+        isAssistant ? "items-start" : "items-end",
       )}
     >
-      {message.meta && (
-        <div className="mb-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em]">
-          {message.meta.model ? (
+      <div
+        className={cn(
+          "flex items-center gap-2 px-1 text-[11px] uppercase tracking-[0.22em]",
+          isAssistant ? "text-text-400" : "text-text-500",
+        )}
+      >
+        <span>{isAssistant ? "Asistente" : "Tú"}</span>
+      </div>
+
+      <div
+        className={cn(
+          "max-w-[96%] rounded-[26px] px-4 py-4 text-sm leading-7 shadow-sm md:max-w-[88%] md:px-5",
+          isAssistant
+            ? "border border-[#ebe2d7] bg-[linear-gradient(180deg,#fffdfa_0%,#f7f2ea_100%)] text-text-200"
+            : "border border-[#c9dbee] bg-[linear-gradient(180deg,#eef6ff_0%,#dfeefe_100%)] text-[#1f3c5b] shadow-[0_20px_40px_-32px_rgba(106,149,196,0.7)]",
+        )}
+      >
+        {!!message.meta?.pasted && (
+          <div className="mb-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em]">
             <span
               className={cn(
                 "rounded-full px-2.5 py-1 font-medium",
-                isAssistant ? "bg-bg-200 text-text-400" : "bg-white/10 text-white/60",
-              )}
-            >
-              {message.meta.model}
-            </span>
-          ) : null}
-          {!!message.meta.files && (
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-1 font-medium",
-                isAssistant ? "bg-bg-200 text-text-400" : "bg-white/10 text-white/60",
-              )}
-            >
-              {message.meta.files} archivo{message.meta.files > 1 ? "s" : ""}
-            </span>
-          )}
-          {!!message.meta.pasted && (
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-1 font-medium",
-                isAssistant ? "bg-bg-200 text-text-400" : "bg-white/10 text-white/60",
+                isAssistant ? "bg-[#f1e8dc] text-text-400" : "bg-white/55 text-[#5b7ea4]",
               )}
             >
               {message.meta.pasted} pegado{message.meta.pasted > 1 ? "s" : ""}
             </span>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {isAssistant ? (
-        <div className="space-y-3 text-[15px] leading-7 [&_a]:text-accent [&_code]:rounded [&_code]:bg-bg-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[0.9em] [&_li]:ml-5 [&_li]:list-disc [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:my-0 [&_pre]:overflow-x-auto [&_pre]:rounded-2xl [&_pre]:bg-[#1f1e1d] [&_pre]:p-4 [&_pre]:text-[#f7f5ee] [&_ul]:space-y-2 [&_ul]:pl-5">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-        </div>
-      ) : (
-        <p className="whitespace-pre-wrap">{message.content}</p>
-      )}
+        {isAssistant ? (
+          <div className="space-y-3 text-[15px] leading-7 [&_a]:text-accent [&_code]:rounded [&_code]:bg-[#f1e8dc] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[0.9em] [&_li]:ml-5 [&_li]:list-disc [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:my-0 [&_pre]:overflow-x-auto [&_pre]:rounded-2xl [&_pre]:bg-[#1f1e1d] [&_pre]:p-4 [&_pre]:text-[#f7f5ee] [&_ul]:space-y-2 [&_ul]:pl-5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</p>
+        )}
+      </div>
     </article>
   );
 }
