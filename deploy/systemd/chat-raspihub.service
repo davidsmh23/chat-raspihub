@@ -1,0 +1,15 @@
+[Unit]
+Description=RaspiHub AI service
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/chat-raspihub
+EnvironmentFile=/opt/chat-raspihub/.env
+ExecStart=/opt/chat-raspihub/.venv/bin/gunicorn --config /opt/chat-raspihub/gunicorn.conf.py wsgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

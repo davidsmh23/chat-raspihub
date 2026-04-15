@@ -1,4 +1,5 @@
-flask
-google-generativeai
-requests
-flask_session
+Flask>=3.0,<4
+Flask-Session>=0.8,<1
+google-genai>=1.0,<2
+gunicorn>=23,<24
+requests>=2.32,<3
