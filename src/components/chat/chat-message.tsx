@@ -14,10 +14,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <article
       className={cn(
-        "max-w-[92%] rounded-[28px] border px-4 py-4 text-sm leading-7 shadow-sm transition-colors md:max-w-[80%] md:px-5",
+        "max-w-[92%] px-0 py-3 text-sm leading-7 transition-colors md:max-w-[80%]",
         isAssistant
-          ? "border-white/70 bg-white/90 text-text-200 shadow-[0_18px_60px_-30px_rgba(44,38,30,0.25)]"
-          : "ml-auto border-transparent bg-[linear-gradient(135deg,#1f1e1d_0%,#35312b_100%)] text-bg-0",
+          ? "text-text-200"
+          : "ml-auto max-w-[88%] rounded-[22px] bg-[linear-gradient(135deg,#1f1e1d_0%,#35312b_100%)] px-4 py-3 text-bg-0 md:px-5",
       )}
     >
       {message.meta && (
@@ -25,8 +25,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {message.meta.model ? (
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 font-medium",
-                isAssistant ? "border-bg-300 text-text-400" : "border-white/15 text-white/60",
+                "rounded-full px-2.5 py-1 font-medium",
+                isAssistant ? "bg-bg-200 text-text-400" : "bg-white/10 text-white/60",
               )}
             >
               {message.meta.model}
@@ -35,8 +35,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {!!message.meta.files && (
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 font-medium",
-                isAssistant ? "border-bg-300 text-text-400" : "border-white/15 text-white/60",
+                "rounded-full px-2.5 py-1 font-medium",
+                isAssistant ? "bg-bg-200 text-text-400" : "bg-white/10 text-white/60",
               )}
             >
               {message.meta.files} archivo{message.meta.files > 1 ? "s" : ""}
@@ -45,8 +45,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {!!message.meta.pasted && (
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 font-medium",
-                isAssistant ? "border-bg-300 text-text-400" : "border-white/15 text-white/60",
+                "rounded-full px-2.5 py-1 font-medium",
+                isAssistant ? "bg-bg-200 text-text-400" : "bg-white/10 text-white/60",
               )}
             >
               {message.meta.pasted} pegado{message.meta.pasted > 1 ? "s" : ""}
