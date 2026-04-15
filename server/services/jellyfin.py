@@ -45,7 +45,7 @@ class JellyfinLibraryService:
         "crime": {"crime", "crimen"},
         "documentary": {"documentary", "documental"},
         "drama": {"drama"},
-        "fantasy": {"fantasy", "fantasia", "fantasía"},
+        "fantasy": {"fantasy", "fantasia", "fantasía", "magia", "magico", "magica"},
         "history": {"history", "historia"},
         "horror": {"horror", "terror"},
         "mystery": {"mystery", "misterio"},
