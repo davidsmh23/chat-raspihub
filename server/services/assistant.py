@@ -94,7 +94,7 @@ class AssistantService:
 
     def _message_requires_audit(self, message: str) -> bool:
         normalized = self._normalize_text(message)
-        keywords = ("temporada", "temporadas", "al dia", "desactual", "falta", "faltan", "tmdb")
+        keywords = ("temporada", "temporadas", "al dia", "desactual", "desactualizada", "desactualizadas", "falta", "faltan", "tmdb")
         return any(keyword in normalized for keyword in keywords)
 
     def _extract_requested_count(self, message: str, default: int = 5) -> int:
@@ -185,6 +185,66 @@ class AssistantService:
 
         return self._format_catalog_items(items, media_type, genre, requested_count)
 
+    def _is_top_rated_query(self, message: str) -> bool:
+        normalized = self._normalize_text(message)
+        patterns = (
+            "mejor valorada",
+            "mejor valorado",
+            "mas valorada",
+            "mas valorado",
+            "mejor puntuada",
+            "mejor puntuado",
+            "con mejor nota",
+            "top",
+        )
+        return any(pattern in normalized for pattern in patterns)
+
+    def _top_rated_response(self, *, message: str, history: list[dict[str, Any]]) -> str | None:
+        if not self._is_top_rated_query(message):
+            return None
+
+        media_type = self._detect_media_type(message) or self._infer_media_type_from_history(history)
+        if not media_type:
+            return None
+
+        requested_count = self._extract_requested_count(message, default=1)
+        genre = None
+        detected_genres = self.library_service.detect_genres_in_query(message) or self._infer_genres_from_history(history)
+        if detected_genres:
+            genre = detected_genres[0]
+
+        exclude_titles = self._extract_recent_suggestions(history) if self._looks_like_follow_up(message) else None
+        items = self.library_service.find_top_rated_items(
+            media_type=media_type,
+            limit=requested_count,
+            genre=genre,
+            exclude_titles=exclude_titles,
+        )
+
+        if not items:
+            media_label = "peliculas" if media_type == "movie" else "series"
+            if genre:
+                return f"No he encontrado {media_label} del genero {genre} con valoracion disponible."
+            return f"No he encontrado {media_label} con valoracion disponible en la biblioteca."
+
+        media_label = "pelicula" if media_type == "movie" and requested_count == 1 else "peliculas"
+        if media_type == "series":
+            media_label = "serie" if requested_count == 1 else "series"
+
+        scope = f" de {genre}" if genre else ""
+        if requested_count == 1:
+            item = items[0]
+            year = f" ({item['year']})" if item.get("year") else ""
+            rating = f"{item['communityRating']:.1f}/10" if item.get("communityRating") else "sin nota"
+            return f"La {media_label} mejor valorada{scope} de tu biblioteca es {item['name']}{year} con {rating}."
+
+        lines = [f"Aqui tienes las {len(items)} {media_label} mejor valoradas{scope} de tu biblioteca:"]
+        for item in items:
+            year = f" ({item['year']})" if item.get("year") else ""
+            rating = f" · {item['communityRating']:.1f}/10" if item.get("communityRating") else ""
+            lines.append(f"- {item['name']}{year}{rating}")
+        return "\n".join(lines)
+
     def _stats_response(self, message: str, overview: dict[str, Any]) -> str | None:
         normalized = self._normalize_text(message)
         stats = overview["stats"]
@@ -235,6 +295,10 @@ class AssistantService:
         if library_response is not None:
             return library_response
 
+        top_rated_response = self._top_rated_response(message=message, history=history)
+        if top_rated_response is not None:
+            return top_rated_response
+
         stats_response = self._stats_response(message, overview)
         if stats_response is not None:
             return stats_response
@@ -242,12 +306,6 @@ class AssistantService:
         audit_response = self._audit_response(message, audit, overview)
         if audit_response is not None:
             return audit_response
-
-        if files or pasted_content:
-            return (
-                f"He recibido {len(files)} archivo(s) y {len(pasted_content)} bloque(s) de texto como contexto adicional, "
-                "pero necesito una instruccion mas concreta para operar sobre la biblioteca."
-            )
 
         return None
 
@@ -325,6 +383,7 @@ REGLAS:
 - Si el usuario adjunta archivos o pega contenido, usalo como contexto adicional.
 - No inventes titulos, generos, temporadas, duraciones, estados ni metadatos de la biblioteca.
 - Si algo no esta configurado, dilo con precision y sugiere el siguiente paso util.
+- Si la consulta no encaja en un patron cerrado, interpreta la intencion del usuario y responde con libertad usando el contexto disponible.
 - {'Prioriza respuestas mas profundas y razonadas.' if is_thinking_enabled else 'Prioriza respuestas directas y accionables.'}
 
 RESUMEN DE LA BIBLIOTECA:

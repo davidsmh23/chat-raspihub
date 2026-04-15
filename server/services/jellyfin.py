@@ -358,6 +358,35 @@ class JellyfinLibraryService:
         )
         return filtered[:limit]
 
+    def find_top_rated_items(
+        self,
+        *,
+        media_type: str,
+        limit: int = 5,
+        genre: str | None = None,
+        exclude_titles: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        snapshot = self.snapshot()
+        raw_items = snapshot["movies"] if media_type == "movie" else snapshot["series"]
+        items = self._summarize_items(raw_items)
+
+        if genre:
+            items = [item for item in items if self._item_matches_genre(item, genre)]
+
+        if exclude_titles:
+            items = [item for item in items if (item.get("name") or "").casefold() not in exclude_titles]
+
+        items = [item for item in items if item.get("communityRating") is not None]
+        items.sort(
+            key=lambda item: (
+                item.get("communityRating") or 0,
+                item.get("year") or 0,
+                item.get("name") or "",
+            ),
+            reverse=True,
+        )
+        return items[:limit]
+
     def health_snapshot(self) -> dict[str, Any]:
         snapshot = self.snapshot()
         return {
