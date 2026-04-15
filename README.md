@@ -39,6 +39,8 @@ O bien:
 docker compose up --build -d
 ```
 
+La imagen de Docker queda nombrada como `davidsmh233/chat-ia` y el contenedor como `chat-ia` para mantener compatibilidad con tu publicación en Docker Hub.
+
 ## API principal
 
 - `GET /api/health`

@@ -1,9 +1,10 @@
 services:
-  chat-raspihub:
+  chat-ia:
+    image: davidsmh233/chat-ia
     build:
       context: .
       dockerfile: dockerfile
-    container_name: chat-raspihub
+    container_name: chat-ia
     restart: unless-stopped
     env_file:
       - .env
