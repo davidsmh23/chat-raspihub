@@ -5,6 +5,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from typing import Any
+import unicodedata
 
 import requests
 
@@ -35,6 +36,23 @@ class JellyfinLibraryService:
         "dime",
         "resume",
         "estado",
+    }
+    GENRE_ALIASES = {
+        "action": {"action", "accion", "acción"},
+        "adventure": {"adventure", "aventura"},
+        "animation": {"animation", "animacion", "animación", "anime"},
+        "comedy": {"comedy", "comedia"},
+        "crime": {"crime", "crimen"},
+        "documentary": {"documentary", "documental"},
+        "drama": {"drama"},
+        "fantasy": {"fantasy", "fantasia", "fantasía"},
+        "history": {"history", "historia"},
+        "horror": {"horror", "terror"},
+        "mystery": {"mystery", "misterio"},
+        "romance": {"romance", "romantica", "romántica"},
+        "science fiction": {"science fiction", "sci-fi", "scifi", "ciencia ficcion", "ciencia ficción"},
+        "thriller": {"thriller", "suspense"},
+        "war": {"war", "guerra"},
     }
 
     DETAIL_FIELDS = ",".join(
@@ -145,6 +163,10 @@ class JellyfinLibraryService:
             },
         }
 
+    def _normalize_text(self, text: str) -> str:
+        normalized = unicodedata.normalize("NFKD", text.lower())
+        return "".join(char for char in normalized if not unicodedata.combining(char)).strip()
+
     def _summarize_items(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [self._normalize_item(item) for item in items]
 
@@ -224,9 +246,8 @@ class JellyfinLibraryService:
 
     def _keywords_from_query(self, query: str) -> list[str]:
         normalized = (
-            query.lower()
+            self._normalize_text(query)
             .replace("?", " ")
-            .replace("¿", " ")
             .replace(",", " ")
             .replace(".", " ")
             .replace(":", " ")
@@ -239,8 +260,21 @@ class JellyfinLibraryService:
             if len(word) > 2 and word not in self.STOPWORDS
         ]
 
+    def detect_genres_in_query(self, query: str) -> list[str]:
+        normalized_query = self._normalize_text(query)
+        matches: list[str] = []
+        for canonical, aliases in self.GENRE_ALIASES.items():
+            if any(alias in normalized_query for alias in aliases):
+                matches.append(canonical)
+        return matches
+
+    def _item_matches_genre(self, item: dict[str, Any], canonical_genre: str) -> bool:
+        aliases = {self._normalize_text(alias) for alias in self.GENRE_ALIASES.get(canonical_genre, {canonical_genre})}
+        item_genres = {self._normalize_text(genre) for genre in item.get("genres") or []}
+        return bool(item_genres & aliases)
+
     def _score_item(self, item: dict[str, Any], keywords: list[str]) -> int:
-        haystack = " ".join(
+        haystack = self._normalize_text(" ".join(
             [
                 item.get("name") or "",
                 item.get("originalTitle") or "",
@@ -249,15 +283,18 @@ class JellyfinLibraryService:
                 " ".join(item.get("studios") or []),
                 " ".join(item.get("tags") or []),
             ]
-        ).lower()
+        ))
 
         score = 0
         for keyword in keywords:
-            if keyword in (item.get("name") or "").lower():
+            normalized_keyword = self._normalize_text(keyword)
+            normalized_name = self._normalize_text(item.get("name") or "")
+            normalized_genres = self._normalize_text(" ".join(item.get("genres") or []))
+            if normalized_keyword in normalized_name:
                 score += 5
-            if keyword in " ".join(item.get("genres") or []).lower():
+            if normalized_keyword in normalized_genres:
                 score += 4
-            if keyword in haystack:
+            if normalized_keyword in haystack:
                 score += 1
         return score
 
@@ -266,13 +303,19 @@ class JellyfinLibraryService:
         movies = library_context["movies"]
         series = library_context["series"]
         keywords = self._keywords_from_query(query)
+        detected_genres = self.detect_genres_in_query(query)
 
         genre_counter = Counter()
         for item in [*movies, *series]:
             genre_counter.update(item.get("genres") or [])
 
         relevant = []
-        if keywords:
+        if detected_genres:
+            for item in [*movies, *series]:
+                if any(self._item_matches_genre(item, genre) for genre in detected_genres):
+                    relevant.append(self._compact_item(item))
+            relevant = relevant[:20]
+        elif keywords:
             scored = []
             for item in [*movies, *series]:
                 score = self._score_item(item, keywords)
@@ -290,8 +333,30 @@ class JellyfinLibraryService:
             "topGenres": dict(genre_counter.most_common(15)),
             "relevantItems": relevant,
             "keywords": keywords,
+            "detectedGenres": detected_genres,
             "sync": library_context["sync"],
         }
+
+    def find_items_by_genre(
+        self,
+        *,
+        media_type: str,
+        genre: str,
+        limit: int = 5,
+    ) -> list[dict[str, Any]]:
+        snapshot = self.snapshot()
+        raw_items = snapshot["movies"] if media_type == "movie" else snapshot["series"]
+        items = self._summarize_items(raw_items)
+        filtered = [item for item in items if self._item_matches_genre(item, genre)]
+        filtered.sort(
+            key=lambda item: (
+                item.get("communityRating") or 0,
+                item.get("year") or 0,
+                item.get("name") or "",
+            ),
+            reverse=True,
+        )
+        return filtered[:limit]
 
     def health_snapshot(self) -> dict[str, Any]:
         snapshot = self.snapshot()

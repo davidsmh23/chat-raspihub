@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from server.config import Settings
@@ -50,7 +51,10 @@ class AssistantService:
             else self.audit_service.peek_summary()
         )
 
-        if self._configured and model != "context-only":
+        library_response = self._library_query_response(message)
+        if library_response:
+            response_text = library_response
+        elif self._configured and model != "context-only":
             response_text = self._generate_with_model(
                 message=message,
                 history=history,
@@ -85,6 +89,50 @@ class AssistantService:
         normalized = message.lower()
         keywords = ("temporada", "temporadas", "al día", "desactual", "falta", "faltan", "tmdb")
         return any(keyword in normalized for keyword in keywords)
+
+    def _extract_requested_count(self, message: str, default: int = 5) -> int:
+        match = re.search(r"\b(\d{1,2})\b", message)
+        if not match:
+            return default
+        return max(1, min(int(match.group(1)), 20))
+
+    def _detect_media_type(self, message: str) -> str | None:
+        normalized = message.lower()
+        if any(token in normalized for token in ("peli", "pelis", "película", "peliculas", "películas")):
+            return "movie"
+        if any(token in normalized for token in ("serie", "series")):
+            return "series"
+        return None
+
+    def _library_query_response(self, message: str) -> str | None:
+        media_type = self._detect_media_type(message)
+        genres = self.library_service.detect_genres_in_query(message)
+        if not media_type or not genres:
+            return None
+
+        requested_count = self._extract_requested_count(message)
+        genre = genres[0]
+        items = self.library_service.find_items_by_genre(
+            media_type=media_type,
+            genre=genre,
+            limit=requested_count,
+        )
+
+        if not items:
+            media_label = "películas" if media_type == "movie" else "series"
+            return f"No he encontrado {media_label} del género solicitado en la biblioteca."
+
+        media_label = "películas" if media_type == "movie" else "series"
+        lines = [f"Aquí tienes {len(items)} {media_label} de {genre} en tu biblioteca:"]
+        for item in items:
+            year = f" ({item['year']})" if item.get("year") else ""
+            rating = f" · {item['communityRating']:.1f}/10" if item.get("communityRating") else ""
+            lines.append(f"- {item['name']}{year}{rating}")
+
+        if len(items) < requested_count:
+            lines.append(f"No he encontrado más de {len(items)} coincidencias claras para ese género.")
+
+        return "\n".join(lines)
 
     def _generate_with_model(
         self,
