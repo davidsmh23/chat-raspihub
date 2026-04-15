@@ -43,7 +43,7 @@ class AssistantService:
         pasted_content: list[dict[str, Any]],
     ) -> dict[str, Any]:
         overview = self.library_service.get_overview()
-        library_context = self.library_service.get_library_context()
+        prompt_context = self.library_service.get_prompt_context(message)
         audit = (
             self.audit_service.get_summary(self.library_service.get_series_items())
             if self._message_requires_audit(message)
@@ -59,7 +59,7 @@ class AssistantService:
                 files=files,
                 pasted_content=pasted_content,
                 overview=overview,
-                library_context=library_context,
+                prompt_context=prompt_context,
                 audit=audit,
             )
         else:
@@ -96,7 +96,7 @@ class AssistantService:
         files: list[dict[str, Any]],
         pasted_content: list[dict[str, Any]],
         overview: dict[str, Any],
-        library_context: dict[str, Any],
+        prompt_context: dict[str, Any],
         audit: dict[str, Any],
     ) -> str:
         prompt = self._build_prompt(
@@ -106,12 +106,23 @@ class AssistantService:
             files=files,
             pasted_content=pasted_content,
             overview=overview,
-            library_context=library_context,
+            prompt_context=prompt_context,
             audit=audit,
         )
 
-        reply = self._client.models.generate_content(model=model, contents=prompt)
-        return (reply.text or "").strip() or "No pude generar una respuesta útil."
+        try:
+            reply = self._client.models.generate_content(model=model, contents=prompt)
+            return (reply.text or "").strip() or "No pude generar una respuesta útil."
+        except Exception as exc:
+            if "RESOURCE_EXHAUSTED" in str(exc) or "429" in str(exc):
+                return self._quota_exhausted_response(overview=overview, audit=audit)
+            return self._offline_response(
+                message=message,
+                files=files,
+                pasted_content=pasted_content,
+                overview=overview,
+                audit=audit,
+            )
 
     def _build_prompt(
         self,
@@ -122,7 +133,7 @@ class AssistantService:
         files: list[dict[str, Any]],
         pasted_content: list[dict[str, Any]],
         overview: dict[str, Any],
-        library_context: dict[str, Any],
+        prompt_context: dict[str, Any],
         audit: dict[str, Any],
     ) -> str:
         trimmed_history = history[-8:]
@@ -140,8 +151,8 @@ REGLAS:
 RESUMEN DE LA BIBLIOTECA:
 {json.dumps(overview, ensure_ascii=False, indent=2)}
 
-CATÁLOGO COMPLETO DE JELLYFIN:
-{json.dumps(library_context, ensure_ascii=False, indent=2)}
+CONTEXTO RELEVANTE DE JELLYFIN:
+{json.dumps(prompt_context, ensure_ascii=False, indent=2)}
 
 AUDITORÍA TMDB:
 {json.dumps(audit, ensure_ascii=False, indent=2)}
@@ -204,4 +215,22 @@ CONSULTA DEL USUARIO:
             f"Tu biblioteca tiene {stats['movies']} películas y {stats['series']} series.{attachment_note}\n"
             "El modelo generativo no está configurado, así que ahora mismo respondo en modo asistido local. "
             "Si quieres respuestas más ricas sobre la biblioteca, configura `GENAI_API_KEY`."
+        )
+
+    def _quota_exhausted_response(self, *, overview: dict[str, Any], audit: dict[str, Any]) -> str:
+        stats = overview["stats"]
+        if audit.get("configured") and audit.get("count"):
+            first = audit["items"][0]
+            return (
+                "Gemini ha superado la cuota temporal y he pasado a modo degradado.\n"
+                f"Tu biblioteca tiene {stats['movies']} películas y {stats['series']} series.\n"
+                f"Ahora mismo sí puedo confirmarte al menos una discrepancia detectada por TMDB: "
+                f"{first['name']} (local {first['localSeasons']}, TMDB {first['remoteSeasons']}). "
+                "Espera un minuto o reduce la frecuencia de consultas para volver al modo completo."
+            )
+
+        return (
+            "Gemini ha superado la cuota temporal y he pasado a modo degradado.\n"
+            f"Tu biblioteca tiene {stats['movies']} películas y {stats['series']} series. "
+            "Espera un minuto o reduce la frecuencia de consultas para volver al modo completo."
         )

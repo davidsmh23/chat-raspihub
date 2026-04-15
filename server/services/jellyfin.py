@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 import threading
 import time
 from datetime import datetime, timezone
@@ -11,6 +12,31 @@ from server.config import Settings
 
 
 class JellyfinLibraryService:
+    STOPWORDS = {
+        "de",
+        "del",
+        "la",
+        "el",
+        "los",
+        "las",
+        "y",
+        "o",
+        "que",
+        "tengo",
+        "tienes",
+        "hay",
+        "mis",
+        "series",
+        "peliculas",
+        "películas",
+        "biblioteca",
+        "jellyfin",
+        "quiero",
+        "dime",
+        "resume",
+        "estado",
+    }
+
     DETAIL_FIELDS = ",".join(
         [
             "ChildCount",
@@ -181,6 +207,90 @@ class JellyfinLibraryService:
                 "lastRefreshAt": snapshot["lastRefreshAt"],
                 "lastError": snapshot["lastError"],
             },
+        }
+
+    def _compact_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "name": item.get("name"),
+            "type": item.get("type"),
+            "year": item.get("year"),
+            "genres": item.get("genres") or [],
+            "communityRating": item.get("communityRating"),
+            "officialRating": item.get("officialRating"),
+            "runtimeMinutes": item.get("runtimeMinutes"),
+            "localSeasons": item.get("localSeasons"),
+            "status": item.get("status"),
+        }
+
+    def _keywords_from_query(self, query: str) -> list[str]:
+        normalized = (
+            query.lower()
+            .replace("?", " ")
+            .replace("¿", " ")
+            .replace(",", " ")
+            .replace(".", " ")
+            .replace(":", " ")
+            .replace(";", " ")
+        )
+        words = [word.strip() for word in normalized.split()]
+        return [
+            word
+            for word in words
+            if len(word) > 2 and word not in self.STOPWORDS
+        ]
+
+    def _score_item(self, item: dict[str, Any], keywords: list[str]) -> int:
+        haystack = " ".join(
+            [
+                item.get("name") or "",
+                item.get("originalTitle") or "",
+                item.get("overview") or "",
+                " ".join(item.get("genres") or []),
+                " ".join(item.get("studios") or []),
+                " ".join(item.get("tags") or []),
+            ]
+        ).lower()
+
+        score = 0
+        for keyword in keywords:
+            if keyword in (item.get("name") or "").lower():
+                score += 5
+            if keyword in " ".join(item.get("genres") or []).lower():
+                score += 4
+            if keyword in haystack:
+                score += 1
+        return score
+
+    def get_prompt_context(self, query: str) -> dict[str, Any]:
+        library_context = self.get_library_context()
+        movies = library_context["movies"]
+        series = library_context["series"]
+        keywords = self._keywords_from_query(query)
+
+        genre_counter = Counter()
+        for item in [*movies, *series]:
+            genre_counter.update(item.get("genres") or [])
+
+        relevant = []
+        if keywords:
+            scored = []
+            for item in [*movies, *series]:
+                score = self._score_item(item, keywords)
+                if score > 0:
+                    scored.append((score, item))
+            scored.sort(key=lambda pair: (-pair[0], pair[1].get("name") or ""))
+            relevant = [self._compact_item(item) for _, item in scored[:20]]
+
+        if not relevant:
+            fallback_sample = [*movies[:10], *series[:10]]
+            relevant = [self._compact_item(item) for item in fallback_sample]
+
+        return {
+            "stats": library_context["stats"],
+            "topGenres": dict(genre_counter.most_common(15)),
+            "relevantItems": relevant,
+            "keywords": keywords,
+            "sync": library_context["sync"],
         }
 
     def health_snapshot(self) -> dict[str, Any]:
