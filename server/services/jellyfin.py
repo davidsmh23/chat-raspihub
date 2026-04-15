@@ -11,6 +11,24 @@ from server.config import Settings
 
 
 class JellyfinLibraryService:
+    DETAIL_FIELDS = ",".join(
+        [
+            "ChildCount",
+            "Overview",
+            "Genres",
+            "Studios",
+            "Tags",
+            "PremiereDate",
+            "CommunityRating",
+            "OfficialRating",
+            "RunTimeTicks",
+            "ProviderIds",
+            "OriginalTitle",
+            "SortName",
+            "Status",
+        ]
+    )
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self._lock = threading.Lock()
@@ -43,8 +61,8 @@ class JellyfinLibraryService:
 
     def refresh(self) -> None:
         try:
-            movies = self._fetch_items("Movie")
-            series = self._fetch_items("Series", fields="ChildCount,Overview")
+            movies = self._fetch_items("Movie", fields=self.DETAIL_FIELDS)
+            series = self._fetch_items("Series", fields=self.DETAIL_FIELDS)
 
             with self._lock:
                 self._movies = movies
@@ -67,18 +85,42 @@ class JellyfinLibraryService:
         self._thread_started = True
         threading.Thread(target=_loop, name="jellyfin-refresh", daemon=True).start()
 
+    def _normalize_item(self, item: dict[str, Any]) -> dict[str, Any]:
+        runtime_ticks = item.get("RunTimeTicks")
+        runtime_minutes = None
+        if isinstance(runtime_ticks, int) and runtime_ticks > 0:
+            runtime_minutes = round(runtime_ticks / 10_000_000 / 60)
+
+        studios = item.get("Studios") or []
+        studio_names = [studio.get("Name") for studio in studios if studio.get("Name")]
+        provider_ids = item.get("ProviderIds") or {}
+
+        return {
+            "id": item.get("Id"),
+            "name": item.get("Name"),
+            "sortName": item.get("SortName"),
+            "originalTitle": item.get("OriginalTitle"),
+            "type": item.get("Type"),
+            "year": item.get("ProductionYear"),
+            "overview": item.get("Overview"),
+            "genres": item.get("Genres") or [],
+            "studios": studio_names,
+            "tags": item.get("Tags") or [],
+            "premiereDate": item.get("PremiereDate"),
+            "communityRating": item.get("CommunityRating"),
+            "officialRating": item.get("OfficialRating"),
+            "runtimeMinutes": runtime_minutes,
+            "localSeasons": item.get("ChildCount"),
+            "status": item.get("Status"),
+            "providerIds": {
+                key: value
+                for key, value in provider_ids.items()
+                if key in {"Tmdb", "Imdb", "Tvdb"}
+            },
+        }
+
     def _summarize_items(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return [
-            {
-                "id": item.get("Id"),
-                "name": item.get("Name"),
-                "type": item.get("Type"),
-                "year": item.get("ProductionYear"),
-                "overview": item.get("Overview"),
-                "localSeasons": item.get("ChildCount"),
-            }
-            for item in items
-        ]
+        return [self._normalize_item(item) for item in items]
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
@@ -122,6 +164,24 @@ class JellyfinLibraryService:
 
     def get_series_items(self) -> list[dict[str, Any]]:
         return self._summarize_items(self.snapshot()["series"])
+
+    def get_library_context(self) -> dict[str, Any]:
+        snapshot = self.snapshot()
+        movies = self._summarize_items(snapshot["movies"])
+        series = self._summarize_items(snapshot["series"])
+        return {
+            "movies": movies,
+            "series": series,
+            "stats": {
+                "movies": len(movies),
+                "series": len(series),
+                "totalItems": len(movies) + len(series),
+            },
+            "sync": {
+                "lastRefreshAt": snapshot["lastRefreshAt"],
+                "lastError": snapshot["lastError"],
+            },
+        }
 
     def health_snapshot(self) -> dict[str, Any]:
         snapshot = self.snapshot()

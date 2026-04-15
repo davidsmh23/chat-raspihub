@@ -43,6 +43,7 @@ class AssistantService:
         pasted_content: list[dict[str, Any]],
     ) -> dict[str, Any]:
         overview = self.library_service.get_overview()
+        library_context = self.library_service.get_library_context()
         audit = (
             self.audit_service.get_summary(self.library_service.get_series_items())
             if self._message_requires_audit(message)
@@ -58,6 +59,7 @@ class AssistantService:
                 files=files,
                 pasted_content=pasted_content,
                 overview=overview,
+                library_context=library_context,
                 audit=audit,
             )
         else:
@@ -94,6 +96,7 @@ class AssistantService:
         files: list[dict[str, Any]],
         pasted_content: list[dict[str, Any]],
         overview: dict[str, Any],
+        library_context: dict[str, Any],
         audit: dict[str, Any],
     ) -> str:
         prompt = self._build_prompt(
@@ -103,6 +106,7 @@ class AssistantService:
             files=files,
             pasted_content=pasted_content,
             overview=overview,
+            library_context=library_context,
             audit=audit,
         )
 
@@ -118,6 +122,7 @@ class AssistantService:
         files: list[dict[str, Any]],
         pasted_content: list[dict[str, Any]],
         overview: dict[str, Any],
+        library_context: dict[str, Any],
         audit: dict[str, Any],
     ) -> str:
         trimmed_history = history[-8:]
@@ -128,12 +133,15 @@ Responde siempre en español, con tono claro, útil y profesional.
 REGLAS:
 - Si el usuario pregunta por faltas de temporadas o series desactualizadas, usa la auditoría TMDB si está disponible.
 - Si el usuario adjunta archivos o pega contenido, úsalo como contexto adicional.
-- No inventes títulos, temporadas ni estados de la biblioteca.
+- No inventes títulos, géneros, temporadas, duraciones, estados ni metadatos de la biblioteca.
 - Si algo no está configurado, dilo con precisión y sugiere el siguiente paso útil.
 - {'Prioriza respuestas más profundas y razonadas.' if is_thinking_enabled else 'Prioriza respuestas directas y accionables.'}
 
-ESTADO DE LA BIBLIOTECA:
+RESUMEN DE LA BIBLIOTECA:
 {json.dumps(overview, ensure_ascii=False, indent=2)}
+
+CATÁLOGO COMPLETO DE JELLYFIN:
+{json.dumps(library_context, ensure_ascii=False, indent=2)}
 
 AUDITORÍA TMDB:
 {json.dumps(audit, ensure_ascii=False, indent=2)}
@@ -167,7 +175,7 @@ CONSULTA DEL USUARIO:
             if audit["configured"]:
                 if audit["count"] == 0:
                     return (
-                        f"La auditoría no detecta series desactualizadas. "
+                        "La auditoría no detecta series desactualizadas. "
                         f"Tienes {stats['series']} series indexadas y no hay diferencias pendientes en la muestra auditada."
                     )
 
