@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  chat-ia:
+    image: davidsmh233/chat-ia
+    container_name: chat-ia
+    ports:
+      - "3752:3752"
+    networks:
+      - proxy_net
+    restart: unless-stopped
+    env_file:
+      - .env
+
+networks:
+  proxy_net:
+    external: true

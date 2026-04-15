@@ -1,0 +1,9 @@
+# Ignorar variables de entorno
+.env
+
+# Ignorar certificados SSL y configuraciones de Let's Encrypt
+certbot/
+
+# (Opcional) Ignorar otras carpetas comunes de datos si las tienes
+# db_data/
+# jellyfin_config/
