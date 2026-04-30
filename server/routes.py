@@ -15,6 +15,10 @@ def _services():
     )
 
 
+def _memory_service():
+    return current_app.extensions["memory_service"]
+
+
 @api.get("/health")
 def health():
     assistant_service, library_service, audit_service, settings = _services()
@@ -66,3 +70,17 @@ def chat():
     session["history"] = history[-settings.max_session_messages :]
 
     return jsonify(response)
+
+
+@api.get("/memory")
+def get_memory():
+    return jsonify({"content": _memory_service().get_context()})
+
+
+@api.post("/memory/save")
+def save_memory():
+    data = request.get_json(silent=True) or {}
+    summary = str(data.get("summary", "")).strip()
+    if summary:
+        _memory_service().append_session(summary)
+    return jsonify({"ok": True})

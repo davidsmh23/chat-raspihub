@@ -11,7 +11,7 @@ interface MediaGridProps {
 
 export function MediaGrid({ overview }: MediaGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { setLibraryTitles } = useMediaHighlight();
+  const { setLibraryTitles, setLibraryItems } = useMediaHighlight();
 
   useEffect(() => {
     if (!overview) return;
@@ -20,7 +20,8 @@ export function MediaGrid({ overview }: MediaGridProps) {
       ...overview.series.items.map((i) => i.name),
     ];
     setLibraryTitles(titles);
-  }, [overview, setLibraryTitles]);
+    setLibraryItems([...overview.movies.items, ...overview.series.items]);
+  }, [overview, setLibraryTitles, setLibraryItems]);
 
   useEffect(() => {
     if (!containerRef.current || !overview) return;

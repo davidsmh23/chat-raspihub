@@ -1,16 +1,43 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { MovieCardGrid } from "@/components/chat/MovieCard";
 import { useMediaHighlight } from "@/contexts/media-highlight-context";
-import type { ChatUiMessage } from "@/types/api";
+import type { ChatUiMessage, LibraryItem } from "@/types/api";
 
 interface ChatMessageProps {
   message: ChatUiMessage;
 }
 
+function extractMatchedItems(content: string, libraryItems: LibraryItem[], libraryTitles: string[]): LibraryItem[] {
+  if (!content.includes("\n- ") && !content.startsWith("- ")) return [];
+
+  const sortedTitles = [...libraryTitles].sort((a, b) => b.length - a.length);
+  const matched: LibraryItem[] = [];
+  const seen = new Set<string>();
+
+  for (const title of sortedTitles) {
+    const lower = title.toLowerCase();
+    if (content.toLowerCase().includes(lower) && !seen.has(lower)) {
+      const item = libraryItems.find((i) => i.name.toLowerCase() === lower);
+      if (item) {
+        matched.push(item);
+        seen.add(lower);
+      }
+    }
+    if (matched.length >= 8) break;
+  }
+
+  return matched;
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const isAssistant = message.role === "assistant";
-  const { libraryTitles, highlight } = useMediaHighlight();
+  const { libraryTitles, libraryItems, highlight } = useMediaHighlight();
+
+  const matchedItems = isAssistant
+    ? extractMatchedItems(message.content, libraryItems, libraryTitles)
+    : [];
 
   const TitleSpan = ({ children }: { children: React.ReactNode }) => {
     const textContent = typeof children === "string" ? children : "";
@@ -119,53 +146,61 @@ export function ChatMessage({ message }: ChatMessageProps) {
         )}
 
         {isAssistant ? (
-          <div
-            style={{
-              fontFamily: "var(--font-body)",
-              fontSize: "0.9rem",
-              lineHeight: 1.75,
-              color: "#f5f0e8",
-            }}
-            className="
-              [&_p]:my-0
-              [&_a]:text-[#c9a84c]
-              [&_code]:rounded [&_code]:bg-[rgba(201,168,76,0.1)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[#c9a84c] [&_code]:font-mono [&_code]:text-[0.85em]
-              [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#0d0d1a] [&_pre]:p-4 [&_pre]:border [&_pre]:border-[rgba(201,168,76,0.1)]
-              [&_ul]:pl-5 [&_ul]:space-y-1.5
-              [&_ol]:pl-5 [&_ol]:space-y-1.5
-              [&_li]:list-disc
-              [&_strong]:text-[#e8c96a] [&_strong]:font-medium
-              [&_table]:border-collapse [&_table]:w-full
-              [&_th]:border [&_th]:border-[rgba(201,168,76,0.2)] [&_th]:p-2 [&_th]:text-left [&_th]:text-[#c9a84c] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider
-              [&_td]:border [&_td]:border-[rgba(201,168,76,0.1)] [&_td]:p-2 [&_td]:text-sm
-              space-y-3
-            "
-          >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => (
-                  <p>
-                    {typeof children === "string" ? (
-                      <TitleSpan>{children}</TitleSpan>
-                    ) : (
-                      children
-                    )}
-                  </p>
-                ),
-                li: ({ children }) => (
-                  <li>
-                    {typeof children === "string" ? (
-                      <TitleSpan>{children}</TitleSpan>
-                    ) : (
-                      children
-                    )}
-                  </li>
-                ),
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "0.9rem",
+                lineHeight: 1.75,
+                color: "#f5f0e8",
               }}
+              className="
+                [&_p]:my-0
+                [&_a]:text-[#c9a84c]
+                [&_code]:rounded [&_code]:bg-[rgba(201,168,76,0.1)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[#c9a84c] [&_code]:font-mono [&_code]:text-[0.85em]
+                [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#0d0d1a] [&_pre]:p-4 [&_pre]:border [&_pre]:border-[rgba(201,168,76,0.1)]
+                [&_ul]:pl-5 [&_ul]:space-y-1.5
+                [&_ol]:pl-5 [&_ol]:space-y-1.5
+                [&_li]:list-disc
+                [&_strong]:text-[#e8c96a] [&_strong]:font-medium
+                [&_table]:border-collapse [&_table]:w-full
+                [&_th]:border [&_th]:border-[rgba(201,168,76,0.2)] [&_th]:p-2 [&_th]:text-left [&_th]:text-[#c9a84c] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider
+                [&_td]:border [&_td]:border-[rgba(201,168,76,0.1)] [&_td]:p-2 [&_td]:text-sm
+                space-y-3
+              "
             >
-              {message.content}
-            </ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => (
+                    <p>
+                      {typeof children === "string" ? (
+                        <TitleSpan>{children}</TitleSpan>
+                      ) : (
+                        children
+                      )}
+                    </p>
+                  ),
+                  li: ({ children }) => (
+                    <li>
+                      {typeof children === "string" ? (
+                        <TitleSpan>{children}</TitleSpan>
+                      ) : (
+                        children
+                      )}
+                    </li>
+                  ),
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
+
+            {matchedItems.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <MovieCardGrid items={matchedItems} />
+              </div>
+            )}
           </div>
         ) : (
           <p

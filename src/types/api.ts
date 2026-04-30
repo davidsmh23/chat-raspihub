@@ -94,6 +94,14 @@ export interface HealthPayload {
   appName: string;
 }
 
+export interface MemoryPayload {
+  content: string;
+}
+
+export interface SaveMemoryPayload {
+  ok: boolean;
+}
+
 export interface ChatUiMessage {
   id: string;
   role: "assistant" | "user";

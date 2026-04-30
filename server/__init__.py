@@ -8,6 +8,7 @@ from .routes import api
 from .services.assistant import AssistantService
 from .services.audit import TmdbAuditService
 from .services.jellyfin import JellyfinLibraryService
+from .services.memory_service import MemoryService
 
 
 def create_app() -> Flask:
@@ -29,13 +30,15 @@ def create_app() -> Flask:
 
     library_service = JellyfinLibraryService(settings)
     audit_service = TmdbAuditService(settings)
-    assistant_service = AssistantService(settings, library_service, audit_service)
+    memory_service = MemoryService()
+    assistant_service = AssistantService(settings, library_service, audit_service, memory_service)
 
     library_service.start_background_refresh()
 
     app.extensions["settings"] = settings
     app.extensions["library_service"] = library_service
     app.extensions["audit_service"] = audit_service
+    app.extensions["memory_service"] = memory_service
     app.extensions["assistant_service"] = assistant_service
 
     app.register_blueprint(api, url_prefix="/api")

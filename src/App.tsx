@@ -1,64 +1,134 @@
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
+import { lazy, Suspense } from "react";
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
-import { AuditSidebar } from "@/components/dashboard/overview-sidebar";
-import { CinematicHero } from "@/components/hero/CinematicHero";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MediaGrid } from "@/components/media/MediaGrid";
 import { MediaHighlightProvider } from "@/contexts/media-highlight-context";
 import { useChat } from "@/hooks/use-chat";
 import { useLibraryOverview } from "@/hooks/use-library-overview";
+import { useSaveMemory } from "@/hooks/useMemory";
+
+const SplineScene = lazy(() =>
+  import("@/components/SplineScene").then((m) => ({ default: m.SplineScene }))
+);
 
 export default function App() {
-  const { data: overview, isLoading, refresh } = useLibraryOverview();
+  const { data: overview } = useLibraryOverview();
   const { messages, isSending, sendMessage } = useChat();
-  const rootRef = useRef<HTMLDivElement>(null);
+  const { saveMemory, isSaving, lastSavedAt } = useSaveMemory();
 
-  useEffect(() => {
-    if (!rootRef.current) return;
-    gsap.from(rootRef.current, { opacity: 0, duration: 0.4, ease: "power2.out" });
-  }, []);
+  const hasConversation = messages.filter((m) => m.id !== "welcome").length > 0;
+
+  const handleSaveSession = () => {
+    void saveMemory(messages);
+  };
 
   return (
     <MediaHighlightProvider>
       <div
-        ref={rootRef}
         style={{
           minHeight: "100dvh",
           background: "#0a0a0f",
-          overflowX: "hidden",
-          overflowY: "auto",
           display: "flex",
           flexDirection: "column",
+          overflowX: "hidden",
         }}
-        className="custom-scrollbar"
       >
-        <CinematicHero overview={overview} isLoading={isLoading} onRefresh={() => void refresh()} />
+        <AppHeader overview={overview} />
+
+        {/* Hidden MediaGrid to populate library context — not rendered visually */}
+        <div style={{ display: "none" }}>
+          <MediaGrid overview={overview} />
+        </div>
 
         <div
           style={{
             flex: 1,
-            padding: "0 clamp(16px, 4vw, 48px)",
+            display: "flex",
+            minHeight: 0,
+            overflow: "hidden",
           }}
         >
-          <MediaGrid overview={overview} />
+          <AppSidebar
+            overview={overview}
+            messages={messages}
+            onSaveSession={handleSaveSession}
+            isSaving={isSaving}
+            lastSavedAt={lastSavedAt}
+          />
 
-          <div
+          <main
             style={{
+              flex: 1,
               display: "flex",
-              gap: 8,
-              paddingBottom: 48,
-              height: "clamp(480px, 55vh, 640px)",
+              flexDirection: "column",
+              minWidth: 0,
+              minHeight: 0,
+              overflow: "hidden",
             }}
           >
-            <AuditSidebar overview={overview} />
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+                maxWidth: 800,
+                width: "100%",
+                margin: "0 auto",
+                padding: "0 16px",
+              }}
+            >
+              {!hasConversation && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 16,
+                    padding: "32px 0 0",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Suspense fallback={<div style={{ width: 400, height: 400 }} />}>
+                    <SplineScene />
+                  </Suspense>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: "clamp(1rem, 1.5vw, 1.2rem)",
+                      fontWeight: 300,
+                      letterSpacing: "0.15em",
+                      color: "rgba(201,168,76,0.5)",
+                      textAlign: "center",
+                      margin: 0,
+                    }}
+                  >
+                    Tu asistente de biblioteca Jellyfin
+                  </p>
+                </div>
+              )}
 
-            <ChatPanel
-              messages={messages}
-              isSending={isSending}
-              onSendMessage={sendMessage}
-            />
-          </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: hasConversation ? 0 : "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  paddingBottom: 24,
+                  marginTop: hasConversation ? 0 : 24,
+                }}
+              >
+                <ChatPanel
+                  messages={messages}
+                  isSending={isSending}
+                  onSendMessage={sendMessage}
+                />
+              </div>
+            </div>
+          </main>
         </div>
       </div>
     </MediaHighlightProvider>

@@ -8,6 +8,7 @@ from typing import Any
 from server.config import Settings
 from server.services.audit import TmdbAuditService
 from server.services.jellyfin import JellyfinLibraryService
+from server.services.memory_service import MemoryService
 
 try:
     from google import genai
@@ -21,10 +22,12 @@ class AssistantService:
         settings: Settings,
         library_service: JellyfinLibraryService,
         audit_service: TmdbAuditService,
+        memory_service: MemoryService | None = None,
     ):
         self.settings = settings
         self.library_service = library_service
         self.audit_service = audit_service
+        self.memory_service = memory_service or MemoryService()
         self._configured = bool(settings.genai_api_key and genai is not None)
         self._client = genai.Client(api_key=settings.genai_api_key) if self._configured else None
 
@@ -374,10 +377,16 @@ class AssistantService:
         audit: dict[str, Any],
     ) -> str:
         trimmed_history = history[-8:]
+        memory_context = self.memory_service.get_context()
+        memory_section = (
+            f"\nMEMORIA DE SESIONES ANTERIORES:\n{memory_context}\n"
+            if memory_context
+            else ""
+        )
         return f"""
 Eres un asistente premium para gestionar y consultar una biblioteca Jellyfin.
 Responde siempre en espanol, con tono claro, util y profesional.
-
+{memory_section}
 REGLAS:
 - Si el usuario pregunta por faltas de temporadas o series desactualizadas, usa la auditoria TMDB si esta disponible.
 - Si el usuario adjunta archivos o pega contenido, usalo como contexto adicional.
