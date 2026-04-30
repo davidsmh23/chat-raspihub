@@ -37,6 +37,14 @@ export interface LibraryItem {
   year?: number;
   overview?: string;
   localSeasons?: number;
+  imageUrl?: string;
+  backdropUrl?: string;
+  hasPrimaryImage?: boolean;
+  hasBackdrop?: boolean;
+  genres?: string[];
+  communityRating?: number;
+  officialRating?: string;
+  runtimeMinutes?: number;
 }
 
 export interface AuditItem {

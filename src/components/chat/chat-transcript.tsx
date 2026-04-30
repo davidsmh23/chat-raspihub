@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
 import { ChatMessage } from "@/components/chat/chat-message";
 import type { ChatUiMessage } from "@/types/api";
@@ -10,24 +11,74 @@ interface ChatTranscriptProps {
 
 export function ChatTranscript({ messages, isSending }: ChatTranscriptProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const prevLenRef = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+
+    if (messages.length > prevLenRef.current) {
+      const container = bottomRef.current?.parentElement;
+      const newMessages = container?.querySelectorAll("article");
+      if (newMessages?.length) {
+        const last = newMessages[newMessages.length - 1];
+        gsap.from(last, { y: 20, opacity: 0, duration: 0.35, ease: "power2.out" });
+      }
+    }
+    prevLenRef.current = messages.length;
   }, [messages, isSending]);
 
   return (
-    <div className="custom-scrollbar h-full overflow-y-auto">
-      <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-7 px-2 py-5 md:px-4 md:py-7">
+    <div
+      className="custom-scrollbar"
+      style={{ height: "100%", overflowY: "auto", overflowX: "hidden" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 24,
+          padding: "20px 20px 8px",
+          minHeight: "100%",
+        }}
+      >
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
 
-        {isSending ? (
-          <div className="flex max-w-[190px] items-center gap-2 rounded-full border border-[#d8e4f3] bg-[#edf4fb] px-4 py-3 text-sm text-text-400">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
-            Generando respuesta...
+        {isSending && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 14px",
+              borderRadius: 99,
+              border: "1px solid rgba(201,168,76,0.2)",
+              background: "rgba(201,168,76,0.05)",
+              width: "fit-content",
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#c9a84c",
+                animation: "pulse 1.2s ease-in-out infinite",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "0.7rem",
+                color: "#9a9080",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Generando respuesta...
+            </span>
           </div>
-        ) : null}
+        )}
         <div ref={bottomRef} />
       </div>
     </div>

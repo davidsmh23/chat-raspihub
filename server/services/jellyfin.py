@@ -70,6 +70,8 @@ class JellyfinLibraryService:
             "OriginalTitle",
             "SortName",
             "Status",
+            "ImageTags",
+            "BackdropImageTags",
         ]
     )
 
@@ -139,8 +141,27 @@ class JellyfinLibraryService:
         studio_names = [studio.get("Name") for studio in studios if studio.get("Name")]
         provider_ids = item.get("ProviderIds") or {}
 
+        item_id = item.get("Id")
+        base_url = self.settings.jellyfin_url
+        has_primary = bool(item.get("ImageTags", {}).get("Primary"))
+        has_backdrop = bool(item.get("BackdropImageTags") or item.get("BackdropImageTag"))
+
+        image_url = None
+        backdrop_url = None
+        if item_id and base_url:
+            if has_primary:
+                image_url = (
+                    f"{base_url}/Items/{item_id}/Images/Primary"
+                    "?fillHeight=450&fillWidth=300&quality=90"
+                )
+            if has_backdrop:
+                backdrop_url = (
+                    f"{base_url}/Items/{item_id}/Images/Backdrop/0"
+                    "?fillHeight=720&fillWidth=1280&quality=85"
+                )
+
         return {
-            "id": item.get("Id"),
+            "id": item_id,
             "name": item.get("Name"),
             "sortName": item.get("SortName"),
             "originalTitle": item.get("OriginalTitle"),
@@ -161,6 +182,10 @@ class JellyfinLibraryService:
                 for key, value in provider_ids.items()
                 if key in {"Tmdb", "Imdb", "Tvdb"}
             },
+            "imageUrl": image_url,
+            "backdropUrl": backdrop_url,
+            "hasPrimaryImage": has_primary,
+            "hasBackdrop": has_backdrop,
         }
 
     def _normalize_text(self, text: str) -> str:
@@ -192,11 +217,11 @@ class JellyfinLibraryService:
             },
             "movies": {
                 "count": len(movies),
-                "items": movies[:8],
+                "items": movies[:16],
             },
             "series": {
                 "count": len(series),
-                "items": series[:8],
+                "items": series[:16],
             },
             "sync": {
                 "lastRefreshAt": snapshot["lastRefreshAt"],

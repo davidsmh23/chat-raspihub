@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { cn } from "@/lib/utils";
+import { useMediaHighlight } from "@/contexts/media-highlight-context";
 import type { ChatUiMessage } from "@/types/api";
 
 interface ChatMessageProps {
@@ -10,38 +10,108 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isAssistant = message.role === "assistant";
+  const { libraryTitles, highlight } = useMediaHighlight();
+
+  const TitleSpan = ({ children }: { children: React.ReactNode }) => {
+    const textContent = typeof children === "string" ? children : "";
+    if (!textContent || !libraryTitles.length || !isAssistant) {
+      return <span>{children}</span>;
+    }
+
+    const sortedTitles = [...libraryTitles].sort((a, b) => b.length - a.length);
+    const escaped = sortedTitles.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const pattern = new RegExp(`(${escaped.join("|")})`, "gi");
+    const parts = textContent.split(pattern);
+
+    return (
+      <>
+        {parts.map((part, i) => {
+          const matched = sortedTitles.find((t) => t.toLowerCase() === part.toLowerCase());
+          if (matched) {
+            return (
+              <button
+                key={i}
+                onClick={() => highlight(matched)}
+                style={{
+                  color: "#c9a84c",
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: "rgba(201,168,76,0.5)",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  font: "inherit",
+                  fontWeight: 500,
+                  display: "inline",
+                }}
+                title={`Resaltar "${matched}" en la biblioteca`}
+              >
+                {part}
+              </button>
+            );
+          }
+          return part;
+        })}
+      </>
+    );
+  };
 
   return (
     <article
-      className={cn(
-        "flex w-full flex-col gap-2",
-        isAssistant ? "items-start" : "items-end",
-      )}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        alignItems: isAssistant ? "flex-start" : "flex-end",
+        width: "100%",
+      }}
     >
       <div
-        className={cn(
-          "flex items-center gap-2 px-1 text-[11px] uppercase tracking-[0.22em]",
-          isAssistant ? "text-text-400" : "text-text-500",
-        )}
+        style={{
+          fontSize: "0.65rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.22em",
+          color: "#9a9080",
+          fontFamily: "var(--font-ui)",
+          paddingLeft: 2,
+          paddingRight: 2,
+        }}
       >
-        <span>{isAssistant ? "Asistente" : "Tú"}</span>
+        {isAssistant ? "Asistente" : "Tú"}
       </div>
 
       <div
-        className={cn(
-          "max-w-[96%] px-1 py-0 text-sm leading-7 md:max-w-[92%]",
-          isAssistant
-            ? "text-text-200"
-            : "rounded-[24px] border border-[#c9dbee] bg-[linear-gradient(180deg,#eef6ff_0%,#dfeefe_100%)] px-4 py-4 text-[#1f3c5b] shadow-[0_20px_40px_-32px_rgba(106,149,196,0.7)] md:px-5",
-        )}
+        style={{
+          maxWidth: "92%",
+          ...(isAssistant
+            ? {}
+            : {
+                background: "linear-gradient(135deg, #1e1a0e 0%, #16120a 100%)",
+                border: "1px solid rgba(201,168,76,0.25)",
+                borderRadius: 16,
+                padding: "12px 16px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+              }),
+        }}
       >
         {!!message.meta?.pasted && (
-          <div className="mb-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em]">
+          <div
+            style={{
+              marginBottom: 10,
+              fontSize: "0.65rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.18em",
+              fontFamily: "var(--font-ui)",
+            }}
+          >
             <span
-              className={cn(
-                "rounded-full px-2.5 py-1 font-medium",
-                isAssistant ? "bg-[#f1e8dc] text-text-400" : "bg-white/55 text-[#5b7ea4]",
-              )}
+              style={{
+                background: "rgba(201,168,76,0.1)",
+                color: "#c9a84c",
+                borderRadius: 99,
+                padding: "2px 8px",
+              }}
             >
               {message.meta.pasted} pegado{message.meta.pasted > 1 ? "s" : ""}
             </span>
@@ -49,11 +119,66 @@ export function ChatMessage({ message }: ChatMessageProps) {
         )}
 
         {isAssistant ? (
-          <div className="space-y-3 text-[15px] leading-7 [&_a]:text-accent [&_code]:rounded [&_code]:bg-[#f1e8dc] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[0.9em] [&_li]:ml-5 [&_li]:list-disc [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:my-0 [&_pre]:overflow-x-auto [&_pre]:rounded-2xl [&_pre]:bg-[#1f1e1d] [&_pre]:p-4 [&_pre]:text-[#f7f5ee] [&_ul]:space-y-2 [&_ul]:pl-5">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          <div
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.9rem",
+              lineHeight: 1.75,
+              color: "#f5f0e8",
+            }}
+            className="
+              [&_p]:my-0
+              [&_a]:text-[#c9a84c]
+              [&_code]:rounded [&_code]:bg-[rgba(201,168,76,0.1)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[#c9a84c] [&_code]:font-mono [&_code]:text-[0.85em]
+              [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[#0d0d1a] [&_pre]:p-4 [&_pre]:border [&_pre]:border-[rgba(201,168,76,0.1)]
+              [&_ul]:pl-5 [&_ul]:space-y-1.5
+              [&_ol]:pl-5 [&_ol]:space-y-1.5
+              [&_li]:list-disc
+              [&_strong]:text-[#e8c96a] [&_strong]:font-medium
+              [&_table]:border-collapse [&_table]:w-full
+              [&_th]:border [&_th]:border-[rgba(201,168,76,0.2)] [&_th]:p-2 [&_th]:text-left [&_th]:text-[#c9a84c] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider
+              [&_td]:border [&_td]:border-[rgba(201,168,76,0.1)] [&_td]:p-2 [&_td]:text-sm
+              space-y-3
+            "
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => (
+                  <p>
+                    {typeof children === "string" ? (
+                      <TitleSpan>{children}</TitleSpan>
+                    ) : (
+                      children
+                    )}
+                  </p>
+                ),
+                li: ({ children }) => (
+                  <li>
+                    {typeof children === "string" ? (
+                      <TitleSpan>{children}</TitleSpan>
+                    ) : (
+                      children
+                    )}
+                  </li>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
         ) : (
-          <p className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</p>
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.9rem",
+              lineHeight: 1.7,
+              color: "#e8d9b8",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {message.content}
+          </p>
         )}
       </div>
     </article>
