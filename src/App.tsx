@@ -1,136 +1,67 @@
-import { lazy, Suspense } from "react";
+import { Moon, Save, Sun } from "lucide-react";
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { AppSidebar } from "@/components/layout/AppSidebar";
-import { MediaGrid } from "@/components/media/MediaGrid";
-import { MediaHighlightProvider } from "@/contexts/media-highlight-context";
+import { useTheme } from "@/contexts/theme-context";
 import { useChat } from "@/hooks/use-chat";
 import { useLibraryOverview } from "@/hooks/use-library-overview";
 import { useSaveMemory } from "@/hooks/useMemory";
 
-const SplineScene = lazy(() =>
-  import("@/components/SplineScene").then((m) => ({ default: m.SplineScene }))
-);
+function StatusBadge({ active, label }: { active: boolean; label: string }) {
+  return (
+    <span className={`status-badge ${active ? "active" : "inactive"}`}>
+      <span className="status-dot" />
+      {label}
+    </span>
+  );
+}
 
 export default function App() {
   const { data: overview } = useLibraryOverview();
   const { messages, isSending, sendMessage } = useChat();
-  const { saveMemory, isSaving, lastSavedAt } = useSaveMemory();
-
-  const hasConversation = messages.filter((m) => m.id !== "welcome").length > 0;
-
-  const handleSaveSession = () => {
-    void saveMemory(messages);
-  };
+  const { saveMemory, isSaving } = useSaveMemory();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <MediaHighlightProvider>
-      <div
-        style={{
-          minHeight: "100dvh",
-          background: "#0a0a0f",
-          display: "flex",
-          flexDirection: "column",
-          overflowX: "hidden",
-        }}
-      >
-        <AppHeader overview={overview} />
+    <div className="app-stage">
+      <div className="background-veil" aria-hidden />
+      <div className="background-grid" aria-hidden />
 
-        {/* Hidden MediaGrid to populate library context — not rendered visually */}
-        <div style={{ display: "none" }}>
-          <MediaGrid overview={overview} />
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark">R</div>
+          <div>
+            <p>RaspiHub Chat</p>
+            <small>Recomendador de peliculas y series</small>
+          </div>
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
-          <AppSidebar
-            overview={overview}
-            messages={messages}
-            onSaveSession={handleSaveSession}
-            isSaving={isSaving}
-            lastSavedAt={lastSavedAt}
-          />
+        <div className="topbar-actions">
+          <div className="status-group">
+            <StatusBadge active={overview?.sync.isConnected ?? false} label="Jellyfin" />
+            <StatusBadge active={overview?.capabilities.tmdbConfigured ?? false} label="TMDB" />
+            <StatusBadge active={overview?.capabilities.assistantConfigured ?? false} label="IA" />
+          </div>
 
-          <main
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              minWidth: 0,
-              minHeight: 0,
-              overflow: "hidden",
-            }}
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => void saveMemory(messages)}
+            disabled={isSaving}
+            title="Guardar resumen de sesion"
           >
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0,
-                maxWidth: 800,
-                width: "100%",
-                margin: "0 auto",
-                padding: "0 16px",
-              }}
-            >
-              {!hasConversation && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 16,
-                    padding: "32px 0 0",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Suspense fallback={<div style={{ width: 400, height: 400 }} />}>
-                    <SplineScene />
-                  </Suspense>
-                  <p
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: "clamp(1rem, 1.5vw, 1.2rem)",
-                      fontWeight: 300,
-                      letterSpacing: "0.15em",
-                      color: "rgba(201,168,76,0.5)",
-                      textAlign: "center",
-                      margin: 0,
-                    }}
-                  >
-                    Tu asistente de biblioteca Jellyfin
-                  </p>
-                </div>
-              )}
+            <Save size={14} />
+            {isSaving ? "Guardando" : "Guardar"}
+          </button>
 
-              <div
-                style={{
-                  flex: 1,
-                  minHeight: hasConversation ? 0 : "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                  paddingBottom: 24,
-                  marginTop: hasConversation ? 0 : 24,
-                }}
-              >
-                <ChatPanel
-                  messages={messages}
-                  isSending={isSending}
-                  onSendMessage={sendMessage}
-                />
-              </div>
-            </div>
-          </main>
+          <button type="button" className="icon-button" onClick={toggleTheme} title="Cambiar tema">
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
         </div>
-      </div>
-    </MediaHighlightProvider>
+      </header>
+
+      <main className="app-main">
+        <ChatPanel messages={messages} isSending={isSending} onSendMessage={sendMessage} />
+      </main>
+    </div>
   );
 }

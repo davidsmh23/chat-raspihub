@@ -184,6 +184,9 @@ class JellyfinLibraryService:
             },
             "imageUrl": image_url,
             "backdropUrl": backdrop_url,
+            "playbackUrl": (
+                f"{base_url}/web/index.html#!/details?id={item_id}" if item_id and base_url else None
+            ),
             "hasPrimaryImage": has_primary,
             "hasBackdrop": has_backdrop,
         }
@@ -411,6 +414,23 @@ class JellyfinLibraryService:
             reverse=True,
         )
         return items[:limit]
+
+    def find_item_by_title(self, title: str) -> dict[str, Any] | None:
+        normalized_title = self._normalize_text(title)
+        if not normalized_title:
+            return None
+
+        candidates = [*self.snapshot()["movies"], *self.snapshot()["series"]]
+        for raw_item in candidates:
+            item = self._normalize_item(raw_item)
+            if self._normalize_text(item.get("name") or "") == normalized_title:
+                return item
+
+        for raw_item in candidates:
+            item = self._normalize_item(raw_item)
+            if normalized_title in self._normalize_text(item.get("name") or ""):
+                return item
+        return None
 
     def health_snapshot(self) -> dict[str, Any]:
         snapshot = self.snapshot()

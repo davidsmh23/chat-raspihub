@@ -7,6 +7,7 @@ from typing import Any
 
 from server.config import Settings
 from server.services.audit import TmdbAuditService
+from server.services.imdb import ImdbMetadataService
 from server.services.jellyfin import JellyfinLibraryService
 from server.services.memory_service import MemoryService
 
@@ -22,11 +23,13 @@ class AssistantService:
         settings: Settings,
         library_service: JellyfinLibraryService,
         audit_service: TmdbAuditService,
+        imdb_service: ImdbMetadataService,
         memory_service: MemoryService | None = None,
     ):
         self.settings = settings
         self.library_service = library_service
         self.audit_service = audit_service
+        self.imdb_service = imdb_service
         self.memory_service = memory_service or MemoryService()
         self._configured = bool(settings.genai_api_key and genai is not None)
         self._client = genai.Client(api_key=settings.genai_api_key) if self._configured else None
@@ -35,6 +38,7 @@ class AssistantService:
         return {
             "configured": self._configured,
             "defaultModel": self.settings.default_model,
+            "imdbConfigured": self.imdb_service.health_snapshot().get("configured", False),
         }
 
     def respond(
@@ -64,8 +68,10 @@ class AssistantService:
             pasted_content=pasted_content,
         )
 
+        recommended_items: list[dict[str, Any]] = []
         if local_response is not None:
-            response_text = local_response
+            response_text = local_response["text"]
+            recommended_items = local_response["items"]
         elif self._configured and model != "context-only":
             response_text = self._generate_with_model(
                 message=message,
@@ -78,8 +84,12 @@ class AssistantService:
                 prompt_context=prompt_context,
                 audit=audit,
             )
+            recommended_items = self._extract_library_recommendations_from_text(response_text)
         else:
             response_text = self._unavailable_model_response(message=message, overview=overview)
+            recommended_items = self._extract_library_recommendations_from_text(response_text)
+
+        recommendations = self._build_recommendations(items=recommended_items, user_message=message)
 
         return {
             "response": response_text,
@@ -89,6 +99,7 @@ class AssistantService:
                 "pastedCount": len(pasted_content),
                 "thinking": is_thinking_enabled,
             },
+            "recommendations": recommendations,
         }
 
     def _normalize_text(self, text: str) -> str:
@@ -97,7 +108,17 @@ class AssistantService:
 
     def _message_requires_audit(self, message: str) -> bool:
         normalized = self._normalize_text(message)
-        keywords = ("temporada", "temporadas", "al dia", "desactual", "desactualizada", "desactualizadas", "falta", "faltan", "tmdb")
+        keywords = (
+            "temporada",
+            "temporadas",
+            "al dia",
+            "desactual",
+            "desactualizada",
+            "desactualizadas",
+            "falta",
+            "faltan",
+            "tmdb",
+        )
         return any(keyword in normalized for keyword in keywords)
 
     def _extract_requested_count(self, message: str, default: int = 5) -> int:
@@ -150,7 +171,9 @@ class AssistantService:
                     suggested_titles.add(title.casefold())
         return suggested_titles
 
-    def _format_catalog_items(self, items: list[dict[str, Any]], media_type: str, genre: str, requested_count: int) -> str:
+    def _format_catalog_items(
+        self, items: list[dict[str, Any]], media_type: str, genre: str, requested_count: int
+    ) -> str:
         media_label = "peliculas" if media_type == "movie" else "series"
         lines = [f"Aqui tienes {len(items)} {media_label} de {genre} en tu biblioteca:"]
         for item in items:
@@ -162,7 +185,9 @@ class AssistantService:
             lines.append(f"No he encontrado mas de {len(items)} coincidencias claras para ese genero.")
         return "\n".join(lines)
 
-    def _library_query_response(self, *, message: str, history: list[dict[str, Any]]) -> str | None:
+    def _library_query_response(
+        self, *, message: str, history: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
         media_type = self._detect_media_type(message) or self._infer_media_type_from_history(history)
         genres = self.library_service.detect_genres_in_query(message) or self._infer_genres_from_history(history)
         if not media_type or not genres:
@@ -184,9 +209,15 @@ class AssistantService:
 
         if not items:
             media_label = "peliculas" if media_type == "movie" else "series"
-            return f"No he encontrado {media_label} del genero solicitado en la biblioteca."
+            return {
+                "text": f"No he encontrado {media_label} del genero solicitado en la biblioteca.",
+                "items": [],
+            }
 
-        return self._format_catalog_items(items, media_type, genre, requested_count)
+        return {
+            "text": self._format_catalog_items(items, media_type, genre, requested_count),
+            "items": items,
+        }
 
     def _is_top_rated_query(self, message: str) -> bool:
         normalized = self._normalize_text(message)
@@ -202,7 +233,9 @@ class AssistantService:
         )
         return any(pattern in normalized for pattern in patterns)
 
-    def _top_rated_response(self, *, message: str, history: list[dict[str, Any]]) -> str | None:
+    def _top_rated_response(
+        self, *, message: str, history: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
         if not self._is_top_rated_query(message):
             return None
 
@@ -227,8 +260,14 @@ class AssistantService:
         if not items:
             media_label = "peliculas" if media_type == "movie" else "series"
             if genre:
-                return f"No he encontrado {media_label} del genero {genre} con valoracion disponible."
-            return f"No he encontrado {media_label} con valoracion disponible en la biblioteca."
+                return {
+                    "text": f"No he encontrado {media_label} del genero {genre} con valoracion disponible.",
+                    "items": [],
+                }
+            return {
+                "text": f"No he encontrado {media_label} con valoracion disponible en la biblioteca.",
+                "items": [],
+            }
 
         media_label = "pelicula" if media_type == "movie" and requested_count == 1 else "peliculas"
         if media_type == "series":
@@ -239,40 +278,51 @@ class AssistantService:
             item = items[0]
             year = f" ({item['year']})" if item.get("year") else ""
             rating = f"{item['communityRating']:.1f}/10" if item.get("communityRating") else "sin nota"
-            return f"La {media_label} mejor valorada{scope} de tu biblioteca es {item['name']}{year} con {rating}."
+            return {
+                "text": f"La {media_label} mejor valorada{scope} de tu biblioteca es {item['name']}{year} con {rating}.",
+                "items": items,
+            }
 
         lines = [f"Aqui tienes las {len(items)} {media_label} mejor valoradas{scope} de tu biblioteca:"]
         for item in items:
             year = f" ({item['year']})" if item.get("year") else ""
             rating = f" · {item['communityRating']:.1f}/10" if item.get("communityRating") else ""
             lines.append(f"- {item['name']}{year}{rating}")
-        return "\n".join(lines)
+        return {"text": "\n".join(lines), "items": items}
 
-    def _stats_response(self, message: str, overview: dict[str, Any]) -> str | None:
+    def _stats_response(self, message: str, overview: dict[str, Any]) -> dict[str, Any] | None:
         normalized = self._normalize_text(message)
         stats = overview["stats"]
 
         if "cuantas" not in normalized and "cuantos" not in normalized:
             return None
         if "peli" in normalized or "pelicula" in normalized:
-            return f"Tienes {stats['movies']} peliculas en la biblioteca."
+            return {"text": f"Tienes {stats['movies']} peliculas en la biblioteca.", "items": []}
         if "serie" in normalized:
-            return f"Tienes {stats['series']} series en la biblioteca."
+            return {"text": f"Tienes {stats['series']} series en la biblioteca.", "items": []}
         if any(token in normalized for token in ("total", "elementos", "titulos", "contenido")):
-            return f"Tienes {stats['totalItems']} titulos en total: {stats['movies']} peliculas y {stats['series']} series."
+            return {
+                "text": f"Tienes {stats['totalItems']} titulos en total: {stats['movies']} peliculas y {stats['series']} series.",
+                "items": [],
+            }
         return None
 
-    def _audit_response(self, message: str, audit: dict[str, Any], overview: dict[str, Any]) -> str | None:
+    def _audit_response(
+        self, message: str, audit: dict[str, Any], overview: dict[str, Any]
+    ) -> dict[str, Any] | None:
         if not self._message_requires_audit(message):
             return None
 
         stats = overview["stats"]
         if audit["configured"]:
             if audit["count"] == 0:
-                return (
-                    "La auditoria no detecta series desactualizadas. "
-                    f"Tienes {stats['series']} series indexadas y no hay diferencias pendientes en la muestra auditada."
-                )
+                return {
+                    "text": (
+                        "La auditoria no detecta series desactualizadas. "
+                        f"Tienes {stats['series']} series indexadas y no hay diferencias pendientes en la muestra auditada."
+                    ),
+                    "items": [],
+                }
 
             lines = [f"He encontrado {audit['count']} series con temporadas potencialmente pendientes:"]
             for item in audit["items"]:
@@ -280,9 +330,12 @@ class AssistantService:
                     f"- {item['name']}: locales {item['localSeasons']}, TMDB {item['remoteSeasons']} "
                     f"(faltan {item['missingSeasons']})"
                 )
-            return "\n".join(lines)
+            return {"text": "\n".join(lines), "items": []}
 
-        return "La auditoria de TMDB no esta configurada. Anade `TMDB_API_KEY` para comparar temporadas remotas."
+        return {
+            "text": "La auditoria de TMDB no esta configurada. Anade `TMDB_API_KEY` para comparar temporadas remotas.",
+            "items": [],
+        }
 
     def _local_response(
         self,
@@ -293,7 +346,7 @@ class AssistantService:
         audit: dict[str, Any],
         files: list[dict[str, Any]],
         pasted_content: list[dict[str, Any]],
-    ) -> str | None:
+    ) -> dict[str, Any] | None:
         library_response = self._library_query_response(message=message, history=history)
         if library_response is not None:
             return library_response
@@ -311,6 +364,88 @@ class AssistantService:
             return audit_response
 
         return None
+
+    def _extract_library_recommendations_from_text(self, text: str) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        seen = set()
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line.startswith("- "):
+                continue
+            candidate = line[2:]
+            candidate = candidate.split(" (", 1)[0]
+            candidate = candidate.split(" · ", 1)[0]
+            candidate = re.sub(r"[:;,.]+$", "", candidate).strip()
+            if not candidate:
+                continue
+            item = self.library_service.find_item_by_title(candidate)
+            if not item:
+                continue
+            dedupe_key = str(item.get("id") or item.get("name") or "").casefold()
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            items.append(item)
+            if len(items) >= 6:
+                break
+        return items
+
+    def _recommendation_reason_from_query(self, user_message: str) -> str:
+        normalized = self._normalize_text(user_message)
+        if "terror" in normalized or "horror" in normalized:
+            return "Encaja con el tono de terror que has pedido."
+        if "comedia" in normalized:
+            return "Es una opcion solida para una sesion de comedia."
+        if "top" in normalized or "mejor" in normalized:
+            return "Destaca por su valoracion dentro de tu biblioteca."
+        return "Buena opcion basada en tu consulta actual."
+
+    def _build_recommendations(
+        self, *, items: list[dict[str, Any]], user_message: str
+    ) -> list[dict[str, Any]]:
+        if not items:
+            return []
+
+        reason = self._recommendation_reason_from_query(user_message)
+        payload: list[dict[str, Any]] = []
+        seen = set()
+        for item in items:
+            dedupe_key = str(item.get("id") or item.get("name") or "").casefold()
+            if not dedupe_key or dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+
+            imdb = self.imdb_service.enrich_item(item)
+            playback_url = item.get("playbackUrl")
+            available = bool(playback_url and item.get("id"))
+
+            payload.append(
+                {
+                    "title": item.get("name"),
+                    "type": "Serie"
+                    if str(item.get("type", "")).lower().startswith("series")
+                    else "Pelicula",
+                    "year": imdb.get("year") or item.get("year"),
+                    "genres": imdb.get("genres") or item.get("genres") or [],
+                    "runtimeMinutes": imdb.get("runtimeMinutes") or item.get("runtimeMinutes"),
+                    "rating": imdb.get("imdbRating") or item.get("communityRating"),
+                    "posterUrl": imdb.get("posterUrl") or item.get("imageUrl"),
+                    "description": imdb.get("plot") or item.get("overview"),
+                    "reason": reason,
+                    "jellyfin": {
+                        "available": available,
+                        "playUrl": playback_url if available else None,
+                        "statusMessage": (
+                            "Disponible en Jellyfin, puedes abrirla ya."
+                            if available
+                            else "No disponible ahora en Jellyfin. Puedes pedir una alternativa similar."
+                        ),
+                    },
+                }
+            )
+            if len(payload) >= 6:
+                break
+        return payload
 
     def _generate_with_model(
         self,
@@ -340,18 +475,6 @@ class AssistantService:
             reply = self._client.models.generate_content(model=model, contents=prompt)
             return (reply.text or "").strip() or "No pude generar una respuesta util."
         except Exception as exc:
-            if "RESOURCE_EXHAUSTED" in str(exc) or "429" in str(exc):
-                local_response = self._local_response(
-                    message=message,
-                    history=history,
-                    overview=overview,
-                    audit=audit,
-                    files=files,
-                    pasted_content=pasted_content,
-                )
-                if local_response is not None:
-                    return local_response
-                return self._quota_exhausted_response(overview=overview, audit=audit)
             local_response = self._local_response(
                 message=message,
                 history=history,
@@ -361,7 +484,10 @@ class AssistantService:
                 pasted_content=pasted_content,
             )
             if local_response is not None:
-                return local_response
+                return local_response["text"]
+
+            if "RESOURCE_EXHAUSTED" in str(exc) or "429" in str(exc):
+                return self._quota_exhausted_response(overview=overview, audit=audit)
             return self._unavailable_model_response(message=message, overview=overview)
 
     def _build_prompt(

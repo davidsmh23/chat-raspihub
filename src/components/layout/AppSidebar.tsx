@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { AlertTriangle, BookOpen, ChevronLeft, ChevronRight, Save } from "lucide-react";
+import { AlertTriangle, BookOpen, ChevronLeft, ChevronRight, Database, Save } from "lucide-react";
 
 import type { ChatUiMessage, LibraryOverviewPayload } from "@/types/api";
 
@@ -12,9 +12,15 @@ interface AppSidebarProps {
   lastSavedAt: Date | null;
 }
 
-const SIDEBAR_OPEN_WIDTH = 260;
+const SIDEBAR_WIDTH = 252;
 
-export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSavedAt }: AppSidebarProps) {
+export function AppSidebar({
+  overview,
+  messages,
+  onSaveSession,
+  isSaving,
+  lastSavedAt,
+}: AppSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -22,11 +28,17 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
   useEffect(() => {
     if (!sidebarRef.current || !contentRef.current) return;
     if (isOpen) {
-      gsap.to(sidebarRef.current, { width: SIDEBAR_OPEN_WIDTH, duration: 0.3, ease: "power3.out" });
-      gsap.to(contentRef.current, { opacity: 1, x: 0, duration: 0.25, delay: 0.1, ease: "power2.out" });
+      gsap.to(sidebarRef.current, { width: SIDEBAR_WIDTH, duration: 0.3, ease: "power3.out" });
+      gsap.to(contentRef.current, {
+        opacity: 1,
+        x: 0,
+        duration: 0.22,
+        delay: 0.1,
+        ease: "power2.out",
+      });
     } else {
-      gsap.to(contentRef.current, { opacity: 0, x: -8, duration: 0.15, ease: "power2.in" });
-      gsap.to(sidebarRef.current, { width: 0, duration: 0.25, delay: 0.1, ease: "power3.in" });
+      gsap.to(contentRef.current, { opacity: 0, x: -6, duration: 0.14, ease: "power2.in" });
+      gsap.to(sidebarRef.current, { width: 0, duration: 0.24, delay: 0.1, ease: "power3.in" });
     }
   }, [isOpen]);
 
@@ -34,48 +46,58 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
   const auditItems = overview?.audit.items ?? [];
   const conversationCount = messages.filter((m) => m.id !== "welcome").length;
 
-  const formatter = new Intl.DateTimeFormat("es-ES", { timeStyle: "short", dateStyle: "short" });
+  const formatter = new Intl.DateTimeFormat("es-ES", {
+    timeStyle: "short",
+    dateStyle: "short",
+  });
 
   return (
     <div style={{ display: "flex", position: "relative", flexShrink: 0 }}>
+      {/* Toggle strip */}
       <button
         onClick={() => setIsOpen((v) => !v)}
         title={isOpen ? "Cerrar panel" : "Abrir panel"}
         style={{
-          width: 28,
+          width: 26,
           flexShrink: 0,
-          background: "rgba(16,14,10,0.9)",
-          border: "1px solid rgba(201,168,76,0.12)",
+          background: "color-mix(in srgb, var(--color-surface) 70%, transparent)",
+          border: "1px solid rgba(201,168,76,0.1)",
           borderRadius: 8,
           cursor: "pointer",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 12,
-          padding: "16px 0",
-          color: "#9a9080",
-          transition: "color 0.2s, border-color 0.2s",
+          gap: 10,
+          padding: "14px 0",
+          color: "var(--color-text-muted)",
+          transition: "color 0.2s, border-color 0.2s, background 0.2s",
           alignSelf: "stretch",
+          margin: "8px 0",
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = "#c9a84c";
-          (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(201,168,76,0.3)";
+          const btn = e.currentTarget as HTMLButtonElement;
+          btn.style.color = "var(--color-accent)";
+          btn.style.borderColor = "rgba(201,168,76,0.28)";
+          btn.style.background = "rgba(201,168,76,0.07)";
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = "#9a9080";
-          (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(201,168,76,0.12)";
+          const btn = e.currentTarget as HTMLButtonElement;
+          btn.style.color = "var(--color-text-muted)";
+          btn.style.borderColor = "rgba(201,168,76,0.1)";
+          btn.style.background = "color-mix(in srgb, var(--color-surface) 70%, transparent)";
         }}
       >
-        {isOpen ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
-        <BookOpen size={12} />
+        {isOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+        <BookOpen size={11} />
         {auditCount > 0 && (
           <span
             style={{
               fontFamily: "var(--font-ui)",
-              fontSize: "0.55rem",
-              color: "#cc3333",
+              fontSize: "0.52rem",
+              color: "#e05555",
               writingMode: "vertical-rl",
+              fontWeight: 600,
             }}
           >
             {auditCount}
@@ -83,47 +105,45 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
         )}
       </button>
 
+      {/* Panel */}
       <div
         ref={sidebarRef}
-        style={{ width: SIDEBAR_OPEN_WIDTH, overflow: "hidden", flexShrink: 0 }}
+        style={{ width: SIDEBAR_WIDTH, overflow: "hidden", flexShrink: 0 }}
       >
         <div
           ref={contentRef}
+          className="custom-scrollbar"
           style={{
-            width: SIDEBAR_OPEN_WIDTH,
+            width: SIDEBAR_WIDTH,
             height: "100%",
             display: "flex",
             flexDirection: "column",
-            gap: 0,
-            background: "rgba(10,10,15,0.95)",
-            borderRight: "1px solid rgba(201,168,76,0.1)",
+            background: "color-mix(in srgb, var(--color-bg) 90%, transparent)",
+            borderRight: "1px solid rgba(201,168,76,0.08)",
             overflowY: "auto",
             overflowX: "hidden",
           }}
-          className="custom-scrollbar"
         >
-          {/* Biblioteca */}
-          <SidebarSection label="Biblioteca">
+          {/* Library section */}
+          <SidebarSection label="Biblioteca" icon={<Database size={11} color="var(--color-text-muted)" />}>
             {overview ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <StatRow
-                  label="Películas"
-                  value={String(overview.stats.movies)}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <StatRow label="Películas" value={String(overview.stats.movies)} />
+                <StatRow label="Series" value={String(overview.stats.series)} />
+                <div
+                  style={{
+                    height: 1,
+                    background: "rgba(201,168,76,0.08)",
+                    margin: "3px 0",
+                  }}
                 />
-                <StatRow
-                  label="Series"
-                  value={String(overview.stats.series)}
-                />
-                <StatRow
-                  label="Total"
-                  value={String(overview.stats.totalItems)}
-                />
+                <StatRow label="Total" value={String(overview.stats.totalItems)} accent />
                 {overview.sync.lastRefreshAt && (
                   <p
                     style={{
                       fontFamily: "var(--font-ui)",
-                      fontSize: "0.58rem",
-                      color: "#6a6050",
+                      fontSize: "0.56rem",
+                      color: "color-mix(in srgb, var(--color-text-muted) 55%, transparent)",
                       marginTop: 4,
                     }}
                   >
@@ -132,36 +152,64 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
                 )}
               </div>
             ) : (
-              <p style={{ fontFamily: "var(--font-ui)", fontSize: "0.65rem", color: "#6a6050" }}>
-                Cargando...
+              <p
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "0.65rem",
+                  color: "color-mix(in srgb, var(--color-text-muted) 55%, transparent)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    border: "2px solid rgba(201,168,76,0.3)",
+                    borderTopColor: "var(--color-accent)",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                Cargando…
               </p>
             )}
           </SidebarSection>
 
-          {/* Auditoría */}
+          {/* Audit section */}
           {(auditCount > 0 || overview?.audit.configured) && (
             <SidebarSection
               label="Auditoría TMDB"
-              icon={<AlertTriangle size={11} color={auditCount > 0 ? "#cc3333" : "#9a9080"} />}
+              icon={
+                <AlertTriangle
+                  size={11}
+                  color={auditCount > 0 ? "#e05555" : "var(--color-text-muted)"}
+                />
+              }
             >
               {auditItems.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {auditItems.slice(0, 5).map((item) => (
                     <div
                       key={item.name}
                       style={{
-                        padding: "7px 10px",
-                        borderRadius: 6,
-                        background: "rgba(139,0,0,0.08)",
-                        border: "1px solid rgba(139,0,0,0.2)",
+                        padding: "7px 9px",
+                        borderRadius: 7,
+                        background: "rgba(139,0,0,0.07)",
+                        border: "1px solid rgba(139,0,0,0.18)",
                       }}
                     >
                       <p
                         style={{
                           fontFamily: "var(--font-ui)",
-                          fontSize: "0.7rem",
-                          color: "#f5f0e8",
-                          marginBottom: 2,
+                          fontSize: "0.68rem",
+                          color: "var(--color-text)",
+                          marginBottom: 3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {item.name}
@@ -169,8 +217,8 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
                       <p
                         style={{
                           fontFamily: "var(--font-ui)",
-                          fontSize: "0.58rem",
-                          color: "#9a9080",
+                          fontSize: "0.57rem",
+                          color: "var(--color-text-muted)",
                         }}
                       >
                         Local {item.localSeasons}T · TMDB {item.remoteSeasons}T
@@ -181,9 +229,10 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
                     <p
                       style={{
                         fontFamily: "var(--font-ui)",
-                        fontSize: "0.6rem",
-                        color: "#6a6050",
+                        fontSize: "0.58rem",
+                        color: "color-mix(in srgb, var(--color-text-muted) 55%, transparent)",
                         textAlign: "center",
+                        padding: "2px 0",
                       }}
                     >
                       +{auditItems.length - 5} más
@@ -191,25 +240,31 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
                   )}
                 </div>
               ) : (
-                <p style={{ fontFamily: "var(--font-ui)", fontSize: "0.65rem", color: "#6a6050" }}>
+                <p
+                  style={{
+                    fontFamily: "var(--font-ui)",
+                    fontSize: "0.65rem",
+                    color: "color-mix(in srgb, var(--color-text-muted) 55%, transparent)",
+                  }}
+                >
                   Sin discrepancias detectadas.
                 </p>
               )}
             </SidebarSection>
           )}
 
-          {/* Sesión actual */}
+          {/* Session section */}
           <SidebarSection label="Sesión actual">
             <p
               style={{
                 fontFamily: "var(--font-ui)",
-                fontSize: "0.65rem",
-                color: "#9a9080",
+                fontSize: "0.63rem",
+                color: "var(--color-text-muted)",
                 marginBottom: 10,
               }}
             >
               {conversationCount > 0
-                ? `${conversationCount} mensaje${conversationCount !== 1 ? "s" : ""} en esta sesión`
+                ? `${conversationCount} mensaje${conversationCount !== 1 ? "s" : ""}`
                 : "Sin mensajes todavía."}
             </p>
 
@@ -223,46 +278,49 @@ export function AppSidebar({ overview, messages, onSaveSession, isSaving, lastSa
                 justifyContent: "center",
                 gap: 7,
                 padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(201,168,76,0.25)",
+                borderRadius: 9,
+                border: "1px solid rgba(201,168,76,0.2)",
                 background:
                   isSaving || conversationCount === 0
                     ? "rgba(201,168,76,0.04)"
-                    : "rgba(201,168,76,0.1)",
+                    : "rgba(201,168,76,0.09)",
                 color:
-                  isSaving || conversationCount === 0 ? "#6a6050" : "#c9a84c",
+                  isSaving || conversationCount === 0
+                    ? "color-mix(in srgb, var(--color-text-muted) 55%, transparent)"
+                    : "var(--color-accent)",
                 fontFamily: "var(--font-ui)",
-                fontSize: "0.68rem",
+                fontSize: "0.66rem",
                 letterSpacing: "0.06em",
-                cursor:
-                  isSaving || conversationCount === 0 ? "default" : "pointer",
+                cursor: isSaving || conversationCount === 0 ? "default" : "pointer",
                 transition: "all 0.2s ease",
               }}
               onMouseEnter={(e) => {
                 if (!isSaving && conversationCount > 0) {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.18)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(201,168,76,0.5)";
+                  const btn = e.currentTarget as HTMLButtonElement;
+                  btn.style.background = "rgba(201,168,76,0.14)";
+                  btn.style.borderColor = "rgba(201,168,76,0.38)";
                 }
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background =
+                const btn = e.currentTarget as HTMLButtonElement;
+                btn.style.background =
                   isSaving || conversationCount === 0
                     ? "rgba(201,168,76,0.04)"
-                    : "rgba(201,168,76,0.1)";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(201,168,76,0.25)";
+                    : "rgba(201,168,76,0.09)";
+                btn.style.borderColor = "rgba(201,168,76,0.2)";
               }}
             >
               <Save size={12} />
-              {isSaving ? "Guardando..." : "Guardar sesión"}
+              {isSaving ? "Guardando…" : "Guardar sesión"}
             </button>
 
             {lastSavedAt && (
               <p
                 style={{
                   fontFamily: "var(--font-ui)",
-                  fontSize: "0.58rem",
-                  color: "#4ade80",
-                  marginTop: 6,
+                  fontSize: "0.57rem",
+                  color: "#3fb950",
+                  marginTop: 7,
                   textAlign: "center",
                 }}
               >
@@ -288,15 +346,15 @@ function SidebarSection({
   return (
     <div
       style={{
-        padding: "16px 14px",
-        borderBottom: "1px solid rgba(201,168,76,0.08)",
+        padding: "14px 14px",
+        borderBottom: "1px solid rgba(201,168,76,0.07)",
       }}
     >
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: 5,
           marginBottom: 10,
         }}
       >
@@ -304,10 +362,11 @@ function SidebarSection({
         <span
           style={{
             fontFamily: "var(--font-ui)",
-            fontSize: "0.58rem",
+            fontSize: "0.56rem",
             textTransform: "uppercase",
-            letterSpacing: "0.18em",
-            color: "#6a6050",
+            letterSpacing: "0.2em",
+            color: "color-mix(in srgb, var(--color-text-muted) 65%, transparent)",
+            fontWeight: 500,
           }}
         >
           {label}
@@ -318,18 +377,36 @@ function SidebarSection({
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-      <span style={{ fontFamily: "var(--font-ui)", fontSize: "0.65rem", color: "#9a9080" }}>
+    <div
+      style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-ui)",
+          fontSize: "0.63rem",
+          color: accent
+            ? "var(--color-text-muted)"
+            : "color-mix(in srgb, var(--color-text-muted) 75%, transparent)",
+        }}
+      >
         {label}
       </span>
       <span
         style={{
           fontFamily: "var(--font-ui)",
-          fontSize: "0.8rem",
-          color: "#c9a84c",
-          fontWeight: 500,
+          fontSize: accent ? "0.88rem" : "0.78rem",
+          color: "var(--color-accent)",
+          fontWeight: accent ? 600 : 500,
         }}
       >
         {value}

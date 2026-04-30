@@ -17,6 +17,7 @@ class Settings:
     jellyfin_api_key: str | None
     jellyfin_user_id: str | None
     tmdb_api_key: str | None
+    omdb_api_key: str | None
     cache_refresh_interval_seconds: int
     tmdb_audit_ttl_seconds: int
     max_session_messages: int
@@ -35,6 +36,7 @@ class Settings:
             jellyfin_api_key=os.getenv("JELLYFIN_API_KEY"),
             jellyfin_user_id=os.getenv("JELLYFIN_USER_ID"),
             tmdb_api_key=os.getenv("TMDB_API_KEY"),
+            omdb_api_key=os.getenv("OMDB_API_KEY"),
             cache_refresh_interval_seconds=int(os.getenv("CACHE_REFRESH_INTERVAL_SECONDS", "3600")),
             tmdb_audit_ttl_seconds=int(os.getenv("TMDB_AUDIT_TTL_SECONDS", "21600")),
             max_session_messages=int(os.getenv("MAX_SESSION_MESSAGES", "12")),

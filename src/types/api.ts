@@ -28,6 +28,24 @@ export interface ChatResponsePayload {
     pastedCount: number;
     thinking: boolean;
   };
+  recommendations: RecommendationItem[];
+}
+
+export interface RecommendationItem {
+  title: string;
+  type: string;
+  year?: number | null;
+  genres: string[];
+  runtimeMinutes?: number | null;
+  rating?: number | null;
+  posterUrl?: string | null;
+  description?: string | null;
+  reason?: string | null;
+  jellyfin: {
+    available: boolean;
+    playUrl?: string | null;
+    statusMessage: string;
+  };
 }
 
 export interface LibraryItem {
@@ -107,6 +125,7 @@ export interface ChatUiMessage {
   role: "assistant" | "user";
   content: string;
   createdAt: string;
+  recommendations?: RecommendationItem[];
   meta?: {
     model?: string;
     files?: number;

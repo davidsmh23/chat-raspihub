@@ -9,7 +9,8 @@ const initialMessages: ChatUiMessage[] = [
     role: "assistant",
     createdAt: new Date().toISOString(),
     content:
-      "Puedo ayudarte a revisar tu biblioteca Jellyfin, detectar series pendientes, resumir el estado del servidor y responder con el contexto real que expone la API.",
+      "Cuentame que te apetece ver y te recomendare peliculas o series con ficha visual y acceso directo a Jellyfin.",
+    recommendations: [],
   },
 ];
 
@@ -43,6 +44,7 @@ export function useChat() {
         role: "assistant",
         createdAt: new Date().toISOString(),
         content: response.response,
+        recommendations: response.recommendations ?? [],
         meta: {
           model: response.model,
           files: response.echo.fileCount,
@@ -53,7 +55,7 @@ export function useChat() {
       setMessages((current) => [...current, assistantMessage]);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No se pudo completar la petición al asistente.";
+        err instanceof Error ? err.message : "No se pudo completar la peticion al asistente.";
       setError(message);
       setMessages((current) => [
         ...current,
@@ -62,7 +64,8 @@ export function useChat() {
           role: "assistant",
           createdAt: new Date().toISOString(),
           content:
-            "La petición falló. Revisa la conexión con la API o las variables de entorno del backend antes de volver a intentarlo.",
+            "La peticion fallo. Revisa la conexion con la API o las variables de entorno del backend antes de volver a intentarlo.",
+          recommendations: [],
         },
       ]);
     } finally {

@@ -7,6 +7,7 @@ from .config import Settings
 from .routes import api
 from .services.assistant import AssistantService
 from .services.audit import TmdbAuditService
+from .services.imdb import ImdbMetadataService
 from .services.jellyfin import JellyfinLibraryService
 from .services.memory_service import MemoryService
 
@@ -30,8 +31,15 @@ def create_app() -> Flask:
 
     library_service = JellyfinLibraryService(settings)
     audit_service = TmdbAuditService(settings)
+    imdb_service = ImdbMetadataService(settings)
     memory_service = MemoryService()
-    assistant_service = AssistantService(settings, library_service, audit_service, memory_service)
+    assistant_service = AssistantService(
+        settings,
+        library_service,
+        audit_service,
+        imdb_service,
+        memory_service,
+    )
 
     library_service.start_background_refresh()
 
@@ -40,6 +48,7 @@ def create_app() -> Flask:
     app.extensions["audit_service"] = audit_service
     app.extensions["memory_service"] = memory_service
     app.extensions["assistant_service"] = assistant_service
+    app.extensions["imdb_service"] = imdb_service
 
     app.register_blueprint(api, url_prefix="/api")
 
