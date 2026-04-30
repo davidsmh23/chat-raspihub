@@ -143,20 +143,21 @@ class JellyfinLibraryService:
 
         item_id = item.get("Id")
         base_url = self.settings.jellyfin_url
+        public_url = self.settings.jellyfin_public_url
         has_primary = bool(item.get("ImageTags", {}).get("Primary"))
         has_backdrop = bool(item.get("BackdropImageTags") or item.get("BackdropImageTag"))
 
         image_url = None
         backdrop_url = None
-        if item_id and base_url:
+        if item_id and public_url:
             if has_primary:
                 image_url = (
-                    f"{base_url}/Items/{item_id}/Images/Primary"
+                    f"{public_url}/Items/{item_id}/Images/Primary"
                     "?fillHeight=450&fillWidth=300&quality=90"
                 )
             if has_backdrop:
                 backdrop_url = (
-                    f"{base_url}/Items/{item_id}/Images/Backdrop/0"
+                    f"{public_url}/Items/{item_id}/Images/Backdrop/0"
                     "?fillHeight=720&fillWidth=1280&quality=85"
                 )
 

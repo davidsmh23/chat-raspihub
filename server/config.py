@@ -14,6 +14,7 @@ class Settings:
     genai_api_key: str | None
     default_model: str
     jellyfin_url: str
+    jellyfin_public_url: str
     jellyfin_api_key: str | None
     jellyfin_user_id: str | None
     tmdb_api_key: str | None
@@ -33,6 +34,10 @@ class Settings:
             genai_api_key=os.getenv("GENAI_API_KEY"),
             default_model=os.getenv("GENAI_DEFAULT_MODEL", "gemini-2.5-flash"),
             jellyfin_url=os.getenv("JELLYFIN_URL", "http://jellyfin:8096").rstrip("/"),
+            jellyfin_public_url=os.getenv(
+                "JELLYFIN_PUBLIC_URL",
+                os.getenv("JELLYFIN_URL", "http://jellyfin:8096"),
+            ).rstrip("/"),
             jellyfin_api_key=os.getenv("JELLYFIN_API_KEY"),
             jellyfin_user_id=os.getenv("JELLYFIN_USER_ID"),
             tmdb_api_key=os.getenv("TMDB_API_KEY"),
