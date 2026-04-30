@@ -175,15 +175,10 @@ class AssistantService:
         self, items: list[dict[str, Any]], media_type: str, genre: str, requested_count: int
     ) -> str:
         media_label = "peliculas" if media_type == "movie" else "series"
-        lines = [f"Aqui tienes {len(items)} {media_label} de {genre} en tu biblioteca:"]
-        for item in items:
-            year = f" ({item['year']})" if item.get("year") else ""
-            rating = f" · {item['communityRating']:.1f}/10" if item.get("communityRating") else ""
-            lines.append(f"- {item['name']}{year}{rating}")
-
+        text = f"Aqui tienes {len(items)} {media_label} de {genre} en tu biblioteca."
         if len(items) < requested_count:
-            lines.append(f"No he encontrado mas de {len(items)} coincidencias claras para ese genero.")
-        return "\n".join(lines)
+            text += f" No he encontrado mas de {len(items)} coincidencias claras para ese genero."
+        return text
 
     def _library_query_response(
         self, *, message: str, history: list[dict[str, Any]]
@@ -283,12 +278,10 @@ class AssistantService:
                 "items": items,
             }
 
-        lines = [f"Aqui tienes las {len(items)} {media_label} mejor valoradas{scope} de tu biblioteca:"]
-        for item in items:
-            year = f" ({item['year']})" if item.get("year") else ""
-            rating = f" · {item['communityRating']:.1f}/10" if item.get("communityRating") else ""
-            lines.append(f"- {item['name']}{year}{rating}")
-        return {"text": "\n".join(lines), "items": items}
+        return {
+            "text": f"Aqui tienes las {len(items)} {media_label} mejor valoradas{scope} de tu biblioteca.",
+            "items": items,
+        }
 
     def _stats_response(self, message: str, overview: dict[str, Any]) -> dict[str, Any] | None:
         normalized = self._normalize_text(message)
@@ -514,6 +507,7 @@ Eres un asistente premium para gestionar y consultar una biblioteca Jellyfin.
 Responde siempre en espanol, con tono claro, util y profesional.
 {memory_section}
 REGLAS:
+- FORMATO DE RECOMENDACIONES (obligatorio): Cuando el usuario pida recomendaciones de peliculas o series, elige titulos del CONTEXTO RELEVANTE DE JELLYFIN y escribe cada titulo recomendado en una linea separada con guion, usando exactamente: "- Titulo (Año)". Ejemplo: "- 1917 (2019)". Tras la lista puedes anadir un parrafo explicativo, pero la lista debe ir siempre primero en el formato indicado.
 - Si el usuario pregunta por faltas de temporadas o series desactualizadas, usa la auditoria TMDB si esta disponible.
 - Si el usuario adjunta archivos o pega contenido, usalo como contexto adicional.
 - No inventes titulos, generos, temporadas, duraciones, estados ni metadatos de la biblioteca.

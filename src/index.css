@@ -430,29 +430,31 @@ body {
 
 .recommendation-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 14px;
 }
 
 .recommendation-card {
-  border-radius: 14px;
-  border: 1px solid rgba(117, 148, 205, 0.35);
-  background: linear-gradient(145deg, rgba(17, 31, 52, 0.74), rgba(10, 18, 30, 0.9));
+  border-radius: 16px;
+  border: 1px solid rgba(117, 148, 205, 0.3);
+  background: linear-gradient(145deg, rgba(17, 31, 52, 0.82), rgba(8, 14, 26, 0.94));
   overflow: hidden;
   display: grid;
-  grid-template-columns: 104px 1fr;
-  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  grid-template-columns: 148px 1fr;
+  transition: transform 0.26s ease, border-color 0.26s ease, box-shadow 0.26s ease;
+  box-shadow: 0 4px 20px rgba(4, 9, 20, 0.28);
 }
 
 .recommendation-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(245, 201, 106, 0.5);
-  box-shadow: 0 18px 34px rgba(4, 10, 19, 0.4);
+  transform: translateY(-4px);
+  border-color: rgba(245, 201, 106, 0.55);
+  box-shadow: 0 20px 40px rgba(4, 10, 19, 0.46);
 }
 
 .recommendation-poster-wrap {
   position: relative;
-  background: #05080f;
+  background: #040710;
+  min-height: 210px;
 }
 
 .recommendation-poster {
@@ -462,40 +464,56 @@ body {
   display: block;
 }
 
+.recommendation-poster-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    transparent 60%,
+    rgba(8, 14, 26, 0.55) 100%
+  );
+  pointer-events: none;
+}
+
 .recommendation-poster-fallback {
   height: 100%;
-  min-height: 156px;
+  min-height: 210px;
   display: grid;
   place-content: center;
-  gap: 7px;
-  color: rgba(188, 212, 255, 0.7);
+  gap: 8px;
+  color: rgba(188, 212, 255, 0.55);
+  background: linear-gradient(145deg, #0b1422, #050a14);
 }
 
 .recommendation-poster-fallback span {
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
+  font-size: 1.1rem;
+  color: rgba(188, 212, 255, 0.75);
 }
 
 .recommendation-type-pill {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 9px;
+  left: 9px;
   border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 0.66rem;
-  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  background: rgba(245, 201, 106, 0.84);
-  color: #271500;
+  background: rgba(245, 201, 106, 0.9);
+  color: #1c0e00;
+  backdrop-filter: blur(4px);
 }
 
 .recommendation-type-pill.series {
-  background: rgba(145, 183, 255, 0.9);
-  color: #03142d;
+  background: rgba(145, 183, 255, 0.92);
+  color: #021428;
 }
 
 .recommendation-content {
-  padding: 10px 11px 10px;
+  padding: 12px 13px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -564,28 +582,36 @@ body {
   width: fit-content;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  border-radius: 9px;
-  padding: 7px 10px;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 8px 12px;
   background: linear-gradient(140deg, var(--accent), var(--accent-strong));
-  color: #201100;
+  color: #1c0e00;
   text-decoration: none;
-  font-size: 0.77rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: filter 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 4px 14px rgba(245, 180, 60, 0.3);
+}
+
+.recommendation-play:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .recommendation-unavailable {
   width: fit-content;
   border-radius: 9px;
-  border: 1px solid rgba(255, 123, 123, 0.4);
+  border: 1px solid rgba(255, 123, 123, 0.35);
   color: var(--danger);
-  background: rgba(255, 123, 123, 0.1);
-  padding: 6px 9px;
-  font-size: 0.74rem;
+  background: rgba(255, 123, 123, 0.08);
+  padding: 6px 10px;
+  font-size: 0.73rem;
 }
 
 .recommendation-status {
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   line-height: 1.4;
 }
 
@@ -680,9 +706,32 @@ body {
 
   .recommendation-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .recommendation-card {
-    grid-template-columns: 84px 1fr;
+    grid-template-columns: 1fr;
+    grid-template-rows: 220px auto;
+  }
+
+  .recommendation-poster-wrap {
+    height: 220px;
+  }
+
+  .recommendation-poster-fallback {
+    min-height: 220px;
+  }
+
+  .recommendation-poster-overlay {
+    background: linear-gradient(
+      to bottom,
+      transparent 55%,
+      rgba(8, 14, 26, 0.65) 100%
+    );
+  }
+
+  .recommendation-type-pill {
+    top: 10px;
+    left: 10px;
   }
 }

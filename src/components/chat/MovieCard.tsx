@@ -42,7 +42,10 @@ export function RecommendationCard({ item, animationDelay = 0 }: RecommendationC
     >
       <div className="recommendation-poster-wrap">
         {item.posterUrl ? (
-          <img src={item.posterUrl} alt={item.title} className="recommendation-poster" />
+          <>
+            <img src={item.posterUrl} alt={item.title} className="recommendation-poster" />
+            <div className="recommendation-poster-overlay" aria-hidden />
+          </>
         ) : (
           <InitialPoster title={item.title} type={item.type} />
         )}
