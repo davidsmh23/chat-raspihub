@@ -186,7 +186,7 @@ class JellyfinLibraryService:
             "imageUrl": image_url,
             "backdropUrl": backdrop_url,
             "playbackUrl": (
-                f"{base_url}/web/index.html#!/details?id={item_id}" if item_id and base_url else None
+                f"{public_url}/web/index.html#!/details?id={item_id}" if item_id and public_url else None
             ),
             "hasPrimaryImage": has_primary,
             "hasBackdrop": has_backdrop,

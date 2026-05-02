@@ -3,8 +3,6 @@ import type {
   ChatResponsePayload,
   HealthPayload,
   LibraryOverviewPayload,
-  MemoryPayload,
-  SaveMemoryPayload,
 } from "@/types/api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -31,11 +29,5 @@ export const api = {
     request<ChatResponsePayload>("/api/chat", {
       method: "POST",
       body: JSON.stringify(payload),
-    }),
-  getMemory: () => request<MemoryPayload>("/api/memory"),
-  saveMemory: (summary: string) =>
-    request<SaveMemoryPayload>("/api/memory/save", {
-      method: "POST",
-      body: JSON.stringify({ summary }),
     }),
 };

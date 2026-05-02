@@ -1,26 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { AlertTriangle, BookOpen, ChevronLeft, ChevronRight, Database, Save } from "lucide-react";
+import { AlertTriangle, BookOpen, ChevronLeft, ChevronRight, Database } from "lucide-react";
 
-import type { ChatUiMessage, LibraryOverviewPayload } from "@/types/api";
+import type { LibraryOverviewPayload } from "@/types/api";
 
 interface AppSidebarProps {
   overview: LibraryOverviewPayload | null;
-  messages: ChatUiMessage[];
-  onSaveSession: () => void;
-  isSaving: boolean;
-  lastSavedAt: Date | null;
 }
 
 const SIDEBAR_WIDTH = 252;
 
-export function AppSidebar({
-  overview,
-  messages,
-  onSaveSession,
-  isSaving,
-  lastSavedAt,
-}: AppSidebarProps) {
+export function AppSidebar({ overview }: AppSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -44,7 +34,6 @@ export function AppSidebar({
 
   const auditCount = overview?.audit.count ?? 0;
   const auditItems = overview?.audit.items ?? [];
-  const conversationCount = messages.filter((m) => m.id !== "welcome").length;
 
   const formatter = new Intl.DateTimeFormat("es-ES", {
     timeStyle: "short",
@@ -253,81 +242,6 @@ export function AppSidebar({
             </SidebarSection>
           )}
 
-          {/* Session section */}
-          <SidebarSection label="Sesión actual">
-            <p
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: "0.63rem",
-                color: "var(--color-text-muted)",
-                marginBottom: 10,
-              }}
-            >
-              {conversationCount > 0
-                ? `${conversationCount} mensaje${conversationCount !== 1 ? "s" : ""}`
-                : "Sin mensajes todavía."}
-            </p>
-
-            <button
-              onClick={onSaveSession}
-              disabled={isSaving || conversationCount === 0}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                padding: "8px 12px",
-                borderRadius: 9,
-                border: "1px solid rgba(201,168,76,0.2)",
-                background:
-                  isSaving || conversationCount === 0
-                    ? "rgba(201,168,76,0.04)"
-                    : "rgba(201,168,76,0.09)",
-                color:
-                  isSaving || conversationCount === 0
-                    ? "color-mix(in srgb, var(--color-text-muted) 55%, transparent)"
-                    : "var(--color-accent)",
-                fontFamily: "var(--font-ui)",
-                fontSize: "0.66rem",
-                letterSpacing: "0.06em",
-                cursor: isSaving || conversationCount === 0 ? "default" : "pointer",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving && conversationCount > 0) {
-                  const btn = e.currentTarget as HTMLButtonElement;
-                  btn.style.background = "rgba(201,168,76,0.14)";
-                  btn.style.borderColor = "rgba(201,168,76,0.38)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                const btn = e.currentTarget as HTMLButtonElement;
-                btn.style.background =
-                  isSaving || conversationCount === 0
-                    ? "rgba(201,168,76,0.04)"
-                    : "rgba(201,168,76,0.09)";
-                btn.style.borderColor = "rgba(201,168,76,0.2)";
-              }}
-            >
-              <Save size={12} />
-              {isSaving ? "Guardando…" : "Guardar sesión"}
-            </button>
-
-            {lastSavedAt && (
-              <p
-                style={{
-                  fontFamily: "var(--font-ui)",
-                  fontSize: "0.57rem",
-                  color: "#3fb950",
-                  marginTop: 7,
-                  textAlign: "center",
-                }}
-              >
-                Guardado a las {formatter.format(lastSavedAt)}
-              </p>
-            )}
-          </SidebarSection>
         </div>
       </div>
     </div>

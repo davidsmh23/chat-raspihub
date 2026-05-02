@@ -32,7 +32,7 @@ export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
-    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
   }, [message]);
 
   const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -77,15 +77,14 @@ export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps
   return (
     <section className="chat-shell">
       <header className="chat-header">
-        <div>
-          <p className="eyebrow">Asistente de streaming</p>
-          <h2>Descubre tu proxima pelicula o serie</h2>
-        </div>
+        <p className="eyebrow">Asistente de streaming</p>
+        <h2>Descubre tu proxima pelicula o serie</h2>
       </header>
 
       <ChatTranscript messages={messages} isSending={isSending} />
 
       <footer className="chat-composer-wrap">
+        {/* Quick-prompt chips */}
         <div className="quick-prompt-row">
           {QUICK_PROMPTS.map(({ text, icon: Icon }) => (
             <button
@@ -97,7 +96,7 @@ export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps
                 textareaRef.current?.focus();
               }}
             >
-              <Icon size={13} />
+              <Icon size={12} />
               {text}
             </button>
           ))}
@@ -109,6 +108,7 @@ export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps
           </div>
         )}
 
+        {/* Input card */}
         <div className={`chat-composer ${inputFocused ? "focused" : ""}`}>
           <textarea
             ref={textareaRef}
@@ -121,18 +121,24 @@ export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps
             disabled={isSending}
             placeholder="Pide recomendaciones por genero, estado de animo, duracion o disponibilidad..."
             className="custom-scrollbar"
+            rows={1}
           />
-          <button
-            type="button"
-            disabled={!canSend || isSending}
-            className="send-button"
-            onClick={() => void handleSend()}
-            aria-label="Enviar mensaje"
-          >
-            <ArrowUp size={18} />
-          </button>
+
+          <div className="chat-composer-footer">
+            <span className="composer-hint">
+              Enter para enviar &middot; Shift+Enter para nueva línea
+            </span>
+            <button
+              type="button"
+              disabled={!canSend || isSending}
+              className="send-button"
+              onClick={() => void handleSend()}
+              aria-label="Enviar mensaje"
+            >
+              <ArrowUp size={17} />
+            </button>
+          </div>
         </div>
-        <p className="composer-hint">Enter para enviar - Shift + Enter para nueva linea</p>
       </footer>
     </section>
   );

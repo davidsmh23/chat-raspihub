@@ -1,10 +1,9 @@
-import { Moon, Save, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useTheme } from "@/contexts/theme-context";
 import { useChat } from "@/hooks/use-chat";
 import { useLibraryOverview } from "@/hooks/use-library-overview";
-import { useSaveMemory } from "@/hooks/useMemory";
 
 function StatusBadge({ active, label }: { active: boolean; label: string }) {
   return (
@@ -18,7 +17,6 @@ function StatusBadge({ active, label }: { active: boolean; label: string }) {
 export default function App() {
   const { data: overview } = useLibraryOverview();
   const { messages, isSending, sendMessage } = useChat();
-  const { saveMemory, isSaving } = useSaveMemory();
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -41,17 +39,6 @@ export default function App() {
             <StatusBadge active={overview?.capabilities.tmdbConfigured ?? false} label="TMDB" />
             <StatusBadge active={overview?.capabilities.assistantConfigured ?? false} label="IA" />
           </div>
-
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => void saveMemory(messages)}
-            disabled={isSaving}
-            title="Guardar resumen de sesion"
-          >
-            <Save size={14} />
-            {isSaving ? "Guardando" : "Guardar"}
-          </button>
 
           <button type="button" className="icon-button" onClick={toggleTheme} title="Cambiar tema">
             {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}

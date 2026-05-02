@@ -22,24 +22,22 @@ export function AppHeader({ overview }: AppHeaderProps) {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 20px",
-        borderBottom: "1px solid rgba(201,168,76,0.1)",
-        background: "color-mix(in srgb, var(--color-bg) 88%, transparent)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        borderBottom: "1px solid var(--surface-border)",
+        background: "var(--surface)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
         position: "sticky",
         top: 0,
         zIndex: 40,
       }}
     >
-      {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div
           style={{
             width: 28,
             height: 28,
             borderRadius: 8,
-            background: "linear-gradient(135deg, rgba(201,168,76,0.22) 0%, rgba(201,168,76,0.06) 100%)",
-            border: "1px solid rgba(201,168,76,0.28)",
+            background: "var(--accent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -48,10 +46,10 @@ export function AppHeader({ overview }: AppHeaderProps) {
         >
           <span
             style={{
-              fontFamily: "var(--font-display)",
+              fontFamily: "var(--font-heading)",
               fontSize: "1rem",
               fontWeight: 600,
-              color: "var(--color-accent)",
+              color: "#100904",
               lineHeight: 1,
             }}
           >
@@ -60,14 +58,11 @@ export function AppHeader({ overview }: AppHeaderProps) {
         </div>
         <h1
           style={{
-            fontFamily: "var(--font-display)",
+            fontFamily: "var(--font-heading)",
             fontSize: "1.05rem",
-            fontWeight: 300,
-            letterSpacing: "0.28em",
-            background: "linear-gradient(135deg, #e8c96a 0%, #c9a84c 55%, #a07830 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
+            fontWeight: 400,
+            letterSpacing: "0.22em",
+            color: "var(--text)",
             margin: 0,
             textTransform: "uppercase",
           }}
@@ -76,33 +71,15 @@ export function AppHeader({ overview }: AppHeaderProps) {
         </h1>
       </div>
 
-      {/* Right controls */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* Status pills */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "0 4px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 4px" }}>
           <StatusPill active={jellyfin} label="Jellyfin" />
           <StatusPill active={tmdb} label="TMDB" />
           <StatusPill active={ai} label="IA" />
         </div>
 
-        {/* Divider */}
-        <div
-          style={{
-            width: 1,
-            height: 18,
-            background: "rgba(201,168,76,0.15)",
-            margin: "0 2px",
-          }}
-        />
+        <div style={{ width: 1, height: 18, background: "var(--surface-border)", margin: "0 2px" }} />
 
-        {/* Theme toggle */}
         <button
           type="button"
           onClick={toggleTheme}
@@ -112,26 +89,24 @@ export function AppHeader({ overview }: AppHeaderProps) {
             width: 32,
             height: 30,
             borderRadius: 9,
-            border: "1px solid rgba(201,168,76,0.16)",
-            background: "rgba(201,168,76,0.05)",
-            color: "var(--color-text-muted)",
+            border: "1px solid var(--surface-border)",
+            background: "transparent",
+            color: "var(--muted)",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            transition: "color 0.15s ease, border-color 0.15s ease, background 0.15s ease",
+            transition: "color 0.15s ease, border-color 0.15s ease",
           }}
           onMouseEnter={(e) => {
             const btn = e.currentTarget as HTMLButtonElement;
-            btn.style.color = "var(--color-accent)";
-            btn.style.borderColor = "rgba(201,168,76,0.32)";
-            btn.style.background = "rgba(201,168,76,0.09)";
+            btn.style.color = "var(--accent)";
+            btn.style.borderColor = "rgba(220, 80, 0, 0.35)";
           }}
           onMouseLeave={(e) => {
             const btn = e.currentTarget as HTMLButtonElement;
-            btn.style.color = "var(--color-text-muted)";
-            btn.style.borderColor = "rgba(201,168,76,0.16)";
-            btn.style.background = "rgba(201,168,76,0.05)";
+            btn.style.color = "var(--muted)";
+            btn.style.borderColor = "var(--surface-border)";
           }}
         >
           {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
@@ -148,10 +123,10 @@ function StatusPill({ active, label }: { active: boolean; label: string }) {
         display: "flex",
         alignItems: "center",
         gap: 5,
-        padding: "3px 8px",
+        padding: "3px 9px",
         borderRadius: 99,
-        background: active ? "rgba(63,185,80,0.07)" : "rgba(100,100,120,0.07)",
-        border: `1px solid ${active ? "rgba(63,185,80,0.18)" : "rgba(100,100,120,0.12)"}`,
+        background: active ? "rgba(76, 175, 114, 0.07)" : "transparent",
+        border: `1px solid ${active ? "rgba(76, 175, 114, 0.2)" : "var(--surface-border)"}`,
         transition: "all 0.2s ease",
       }}
     >
@@ -160,19 +135,19 @@ function StatusPill({ active, label }: { active: boolean; label: string }) {
           width: 5,
           height: 5,
           borderRadius: "50%",
-          background: active ? "#3fb950" : "#505060",
-          boxShadow: active ? "0 0 6px rgba(63,185,80,0.8)" : "none",
+          background: active ? "#4CAF72" : "var(--muted)",
+          boxShadow: active ? "0 0 6px rgba(76,175,114,0.7)" : "none",
           flexShrink: 0,
           transition: "all 0.2s ease",
         }}
       />
       <span
         style={{
-          fontFamily: "var(--font-ui)",
+          fontFamily: "var(--font-body)",
           fontSize: "0.58rem",
           letterSpacing: "0.05em",
           fontWeight: 500,
-          color: active ? "#3fb950" : "#606070",
+          color: active ? "#4CAF72" : "var(--muted)",
           transition: "color 0.2s ease",
         }}
       >
