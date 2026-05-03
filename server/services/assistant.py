@@ -10,6 +10,7 @@ from server.services.audit import TmdbAuditService
 from server.services.imdb import ImdbMetadataService
 from server.services.jellyfin import JellyfinLibraryService
 from server.services.memory_service import MemoryService
+from server.services.tmdb_image import TmdbImageService
 
 try:
     from google import genai
@@ -25,12 +26,14 @@ class AssistantService:
         audit_service: TmdbAuditService,
         imdb_service: ImdbMetadataService,
         memory_service: MemoryService | None = None,
+        tmdb_image_service: TmdbImageService | None = None,
     ):
         self.settings = settings
         self.library_service = library_service
         self.audit_service = audit_service
         self.imdb_service = imdb_service
         self.memory_service = memory_service or MemoryService()
+        self.tmdb_image_service = tmdb_image_service
         self._configured = bool(settings.genai_api_key and genai is not None)
         self._client = genai.Client(api_key=settings.genai_api_key) if self._configured else None
 
@@ -412,17 +415,26 @@ class AssistantService:
             playback_url = item.get("playbackUrl")
             available = bool(playback_url and item.get("id"))
 
+            tmdb_id = (item.get("providerIds") or {}).get("Tmdb")
+            item_type = item.get("type", "")
+            tmdb_poster = (
+                self.tmdb_image_service.get_poster_url(tmdb_id, item_type)
+                if self.tmdb_image_service and tmdb_id
+                else None
+            )
+            poster_url = tmdb_poster or imdb.get("posterUrl") or item.get("imageUrl")
+
             payload.append(
                 {
                     "title": item.get("name"),
                     "type": "Serie"
-                    if str(item.get("type", "")).lower().startswith("series")
+                    if str(item_type).lower().startswith("series")
                     else "Pelicula",
                     "year": imdb.get("year") or item.get("year"),
                     "genres": imdb.get("genres") or item.get("genres") or [],
                     "runtimeMinutes": imdb.get("runtimeMinutes") or item.get("runtimeMinutes"),
                     "rating": imdb.get("imdbRating") or item.get("communityRating"),
-                    "posterUrl": imdb.get("posterUrl") or item.get("imageUrl"),
+                    "posterUrl": poster_url,
                     "description": imdb.get("plot") or item.get("overview"),
                     "reason": reason,
                     "jellyfin": {

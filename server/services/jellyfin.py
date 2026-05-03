@@ -10,6 +10,7 @@ import unicodedata
 import requests
 
 from server.config import Settings
+from server.services.tmdb_image import TmdbImageService
 
 
 class JellyfinLibraryService:
@@ -75,8 +76,9 @@ class JellyfinLibraryService:
         ]
     )
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, tmdb_image_service: TmdbImageService | None = None):
         self.settings = settings
+        self.tmdb_image_service = tmdb_image_service
         self._lock = threading.Lock()
         self._movies: list[dict[str, Any]] = []
         self._series: list[dict[str, Any]] = []
@@ -142,23 +144,30 @@ class JellyfinLibraryService:
         provider_ids = item.get("ProviderIds") or {}
 
         item_id = item.get("Id")
-        base_url = self.settings.jellyfin_url
         public_url = self.settings.jellyfin_public_url
         has_primary = bool(item.get("ImageTags", {}).get("Primary"))
         has_backdrop = bool(item.get("BackdropImageTags") or item.get("BackdropImageTag"))
+        item_type = item.get("Type", "")
+        tmdb_id = provider_ids.get("Tmdb")
 
         image_url = None
         backdrop_url = None
+
+        if tmdb_id and self.tmdb_image_service:
+            image_url = self.tmdb_image_service.get_poster_url(tmdb_id, item_type)
+
+        api_key = self.settings.jellyfin_api_key
+        auth_suffix = f"&api_key={api_key}" if api_key else ""
         if item_id and public_url:
-            if has_primary:
+            if not image_url and has_primary:
                 image_url = (
                     f"{public_url}/Items/{item_id}/Images/Primary"
-                    "?fillHeight=450&fillWidth=300&quality=90"
+                    f"?fillHeight=450&fillWidth=300&quality=90{auth_suffix}"
                 )
             if has_backdrop:
                 backdrop_url = (
                     f"{public_url}/Items/{item_id}/Images/Backdrop/0"
-                    "?fillHeight=720&fillWidth=1280&quality=85"
+                    f"?fillHeight=720&fillWidth=1280&quality=85{auth_suffix}"
                 )
 
         return {

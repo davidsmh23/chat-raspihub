@@ -10,6 +10,7 @@ from .services.audit import TmdbAuditService
 from .services.imdb import ImdbMetadataService
 from .services.jellyfin import JellyfinLibraryService
 from .services.memory_service import MemoryService
+from .services.tmdb_image import TmdbImageService
 
 
 def create_app() -> Flask:
@@ -29,7 +30,8 @@ def create_app() -> Flask:
 
     Session(app)
 
-    library_service = JellyfinLibraryService(settings)
+    tmdb_image_service = TmdbImageService(settings)
+    library_service = JellyfinLibraryService(settings, tmdb_image_service)
     audit_service = TmdbAuditService(settings)
     imdb_service = ImdbMetadataService(settings)
     memory_service = MemoryService()
@@ -39,6 +41,7 @@ def create_app() -> Flask:
         audit_service,
         imdb_service,
         memory_service,
+        tmdb_image_service,
     )
 
     library_service.start_background_refresh()
