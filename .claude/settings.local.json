@@ -5,7 +5,9 @@
       "Bash(npx tsc *)",
       "Bash(npx vite *)",
       "Bash(npm run *)",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(docker exec *)",
+      "Bash(git -C /home/cuphead/docker/chat log --oneline --all)"
     ]
   }
 }

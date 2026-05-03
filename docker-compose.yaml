@@ -1,6 +1,6 @@
 services:
   chat-ia:
-    image: davidsmh233/chat-ia
+    image: davidsmh233/jellyfin-ai-chat
     build:
       context: .
       dockerfile: dockerfile

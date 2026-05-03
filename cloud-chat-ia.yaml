@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  chat-ia:
+    image: davidsmh233/jellyfin-ai-chat:latest
+    env_file:
+      - .env
+    ports:
+      - target: 3752
+        published: 3752 # He fijado el puerto directamente
+        protocol: tcp
+        mode: host # Fundamental para el túnel de GCP
+    networks:
+      - red_nube
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3752/api/health', timeout=5).read()"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      placement:
+        constraints:
+          - node.labels.entorno == nube # Le decimos que se vaya a Google Cloud
+      restart_policy:
+        condition: any # Sustituye al antiguo 'restart: unless-stopped'
+
+networks:
+  red_nube:
+    external: true

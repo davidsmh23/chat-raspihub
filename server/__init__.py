@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from flask import Flask, jsonify, send_from_directory
@@ -12,9 +13,13 @@ from .services.jellyfin import JellyfinLibraryService
 from .services.memory_service import MemoryService
 from .services.tmdb_image import TmdbImageService
 
+logger = logging.getLogger(__name__)
+
 
 def create_app() -> Flask:
     settings = Settings.from_env()
+
+    _warn_if_internal_url(settings.jellyfin_public_url)
     app = Flask(__name__, static_folder=None)
 
     session_dir = Path(".flask_session")
@@ -86,3 +91,18 @@ def create_app() -> Flask:
         )
 
     return app
+
+
+def _warn_if_internal_url(public_url: str) -> None:
+    import re
+    internal_patterns = [
+        r"^https?://10\.",
+        r"^https?://192\.168\.",
+        r"^https?://172\.(1[6-9]|2\d|3[01])\.",
+        r"^https?://127\.",
+        r"^https?://jellyfin(:\d+)?(/|$)",
+    ]
+    is_internal = any(re.match(p, public_url) for p in internal_patterns)
+    level = logging.WARNING if is_internal else logging.INFO
+    logger.log(level, "Jellyfin public URL: %s%s", public_url,
+               " — ADVERTENCIA: parece una direccion interna. Configura JELLYFIN_PUBLIC_URL con tu dominio publico." if is_internal else "")
