@@ -31,7 +31,7 @@ export function ChatTranscript({ messages, isSending }: ChatTranscriptProps) {
 function TypingIndicator() {
   return (
     <div className="message-row assistant">
-      <div className="message-label">Asistente</div>
+      <div className="message-label">Cartelera</div>
       <div className="typing-indicator">
         <span />
         <span />

@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowUp, Clapperboard, Film, Sparkles, Tv2 } from "lucide-react";
+import { ArrowUp, Popcorn, Sparkles, Star, Tv2 } from "lucide-react";
 
 import { ChatTranscript } from "@/components/chat/chat-transcript";
 import type { ChatRequestPayload, ChatUiMessage, PastedContentPayload } from "@/types/api";
@@ -17,10 +17,10 @@ interface ChatPanelProps {
 }
 
 const QUICK_PROMPTS = [
-  { text: "Recomiendame una pelicula para hoy", icon: Film },
-  { text: "Series cortas para empezar esta semana", icon: Tv2 },
-  { text: "Top peliculas mejor valoradas en mi biblioteca", icon: Clapperboard },
-  { text: "Algo parecido a sci-fi con buen ritmo", icon: Sparkles },
+  { text: "Recomiendame algo para ver esta noche", icon: Popcorn },
+  { text: "Series cortas para maratonear", icon: Tv2 },
+  { text: "Lo mejor valorado de mi biblioteca", icon: Star },
+  { text: "Algo distinto a lo que suelo ver", icon: Sparkles },
 ];
 
 export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps) {
@@ -76,9 +76,15 @@ export function ChatPanel({ messages, isSending, onSendMessage }: ChatPanelProps
 
   return (
     <section className="chat-shell">
+      <div className="film-strip" aria-hidden>
+        {Array.from({ length: 26 }).map((_, i) => (
+          <span key={i} />
+        ))}
+      </div>
+
       <header className="chat-header">
-        <p className="eyebrow">Asistente de streaming</p>
-        <h2>Descubre tu proxima pelicula o serie</h2>
+        <p className="eyebrow">En cartelera</p>
+        <h2>¿Que ponemos hoy?</h2>
       </header>
 
       <ChatTranscript messages={messages} isSending={isSending} />

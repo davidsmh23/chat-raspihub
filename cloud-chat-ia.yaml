@@ -3,8 +3,35 @@ version: "3.8"
 services:
   chat-ia:
     image: davidsmh233/jellyfin-ai-chat:latest
-    env_file:
-      - .env
+    environment:
+      PORT: "3752"
+      GENAI_DEFAULT_MODEL: gemini-3-flash-preview
+      JELLYFIN_URL: http://10.0.0.1:8096
+      JELLYFIN_PUBLIC_URL: https://jellyfin.davidsmh.es
+      JELLYFIN_USER_ID: 90ca75105d0c4c149189d01d29b827b6
+      OMDB_API_KEY: ""
+      CACHE_REFRESH_INTERVAL_SECONDS: "3600"
+      TMDB_AUDIT_TTL_SECONDS: "21600"
+      MAX_SESSION_MESSAGES: "12"
+    secrets:
+      - source: chat_flask_secret_key
+        target: FLASK_SECRET_KEY
+      - source: chat_genai_api_key
+        target: GENAI_API_KEY
+      - source: chat_jellyfin_api_key
+        target: JELLYFIN_API_KEY
+      - source: chat_tmdb_api_key
+        target: TMDB_API_KEY
+    # Los secretos de Swarm llegan como ficheros en /run/secrets/<target>.
+    # El wrapper los exporta como variables de entorno (config.py los lee con
+    # os.getenv) y luego cede el proceso al arranque original de la imagen.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for f in /run/secrets/*; do
+          [ -f "$$f" ] && export "$$(basename "$$f")=$$(cat "$$f")"
+        done
+        exec gunicorn --config gunicorn.conf.py wsgi:application
     ports:
       - target: 3752
         published: 3752 # He fijado el puerto directamente
@@ -27,10 +54,20 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.entorno == nube # Le decimos que se vaya a Google Cloud
+          - node.labels.chat-ia == si # Fijado a gcp-us-central (10.0.0.7)
       restart_policy:
         condition: any # Sustituye al antiguo 'restart: unless-stopped'
 
 networks:
   red_nube:
+    external: true
+
+secrets:
+  chat_flask_secret_key:
+    external: true
+  chat_genai_api_key:
+    external: true
+  chat_jellyfin_api_key:
+    external: true
+  chat_tmdb_api_key:
     external: true

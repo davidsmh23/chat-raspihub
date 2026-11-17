@@ -1,4 +1,4 @@
-import { Clock3, ExternalLink, Film, Star, Tv } from "lucide-react";
+import { ExternalLink, Film, Star, Ticket, Tv } from "lucide-react";
 
 import type { RecommendationItem } from "@/types/api";
 
@@ -24,7 +24,7 @@ function InitialPoster({ title, type }: { title: string; type: string }) {
 
   return (
     <div className="recommendation-poster-fallback">
-      {type.toLowerCase().includes("serie") ? <Tv size={24} /> : <Film size={24} />}
+      {type.toLowerCase().includes("serie") ? <Tv size={22} /> : <Film size={22} />}
       <span>{initials}</span>
     </div>
   );
@@ -33,7 +33,8 @@ function InitialPoster({ title, type }: { title: string; type: string }) {
 export function RecommendationCard({ item, animationDelay = 0 }: RecommendationCardProps) {
   const runtime = formatRuntime(item.runtimeMinutes);
   const showRating = typeof item.rating === "number" && Number.isFinite(item.rating);
-  const genres = item.genres?.slice(0, 3).join(" | ");
+  const isSeries = item.type.toLowerCase().includes("serie");
+  const metaBits = [item.year, runtime].filter(Boolean);
 
   return (
     <article
@@ -49,53 +50,52 @@ export function RecommendationCard({ item, animationDelay = 0 }: RecommendationC
         ) : (
           <InitialPoster title={item.title} type={item.type} />
         )}
-        <span className={`recommendation-type-pill ${item.type.toLowerCase().includes("serie") ? "series" : ""}`}>
-          {item.type}
-        </span>
+
+        <span className={`recommendation-type-pill ${isSeries ? "series" : ""}`}>{item.type}</span>
+
+        {showRating && (
+          <span className="recommendation-rating">
+            <Star size={11} fill="currentColor" />
+            {item.rating?.toFixed(1)}
+          </span>
+        )}
+
+        <div className="recommendation-poster-title">
+          <h4>{item.title}</h4>
+          {metaBits.length > 0 && (
+            <div className="recommendation-poster-meta">
+              {metaBits.map((bit) => (
+                <span key={bit}>{bit}</span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="recommendation-content">
-        <div className="recommendation-head">
-          <h4>{item.title}</h4>
-          {showRating && (
-            <span className="recommendation-rating">
-              <Star size={12} fill="currentColor" />
-              {item.rating?.toFixed(1)}
-            </span>
-          )}
-        </div>
-
-        <div className="recommendation-meta">
-          {item.year && <span>{item.year}</span>}
-          {runtime && (
-            <span>
-              <Clock3 size={12} />
-              {runtime}
-            </span>
-          )}
-          {genres && <span>{genres}</span>}
-        </div>
-
         {item.reason && <p className="recommendation-reason">{item.reason}</p>}
         {item.description && <p className="recommendation-description">{item.description}</p>}
 
-        <div className="recommendation-footer">
-          {item.jellyfin.available && item.jellyfin.playUrl ? (
-            <a
-              href={item.jellyfin.playUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="recommendation-play"
-            >
-              Ver en Jellyfin
-              <ExternalLink size={13} />
-            </a>
-          ) : (
-            <span className="recommendation-unavailable">No disponible en Jellyfin</span>
-          )}
-          <span className={`recommendation-status ${item.jellyfin.available ? "available" : "missing"}`}>
-            {item.jellyfin.statusMessage}
-          </span>
+        <div className="recommendation-stub">
+          <div className="recommendation-footer">
+            {item.jellyfin.available && item.jellyfin.playUrl ? (
+              <a
+                href={item.jellyfin.playUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="recommendation-play"
+              >
+                <Ticket size={13} />
+                Ver en Jellyfin
+                <ExternalLink size={12} />
+              </a>
+            ) : (
+              <span className="recommendation-unavailable">No disponible en Jellyfin</span>
+            )}
+            <span className={`recommendation-status ${item.jellyfin.available ? "available" : "missing"}`}>
+              {item.jellyfin.statusMessage}
+            </span>
+          </div>
         </div>
       </div>
     </article>

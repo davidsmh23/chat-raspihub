@@ -1,4 +1,4 @@
-import { Moon, Sun } from "lucide-react";
+import { Clapperboard, Film, Moon, Sun, Tv } from "lucide-react";
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useTheme } from "@/contexts/theme-context";
@@ -26,23 +26,42 @@ export default function App() {
 
       <header className="topbar">
         <div className="brand">
-          <div className="brand-mark">R</div>
-          <div>
-            <p>RaspiHub Chat</p>
-            <small>Recomendador de peliculas y series</small>
+          <div className="brand-mark">
+            <Clapperboard size={20} strokeWidth={2.25} />
+          </div>
+          <div className="brand-text">
+            <p>Cartelera</p>
+            <small>Chat de tu biblioteca Jellyfin</small>
           </div>
         </div>
 
         <div className="topbar-actions">
-          <div className="status-group">
-            <StatusBadge active={overview?.sync.isConnected ?? false} label="Jellyfin" />
-            <StatusBadge active={overview?.capabilities.tmdbConfigured ?? false} label="TMDB" />
-            <StatusBadge active={overview?.capabilities.assistantConfigured ?? false} label="IA" />
+          <div className="topbar-row">
+            {overview && (
+              <div className="library-stat">
+                <span>
+                  <Film size={12} />
+                  <strong>{overview.stats.movies}</strong> peliculas
+                </span>
+                <span className="divider" aria-hidden />
+                <span>
+                  <Tv size={12} />
+                  <strong>{overview.stats.series}</strong> series
+                </span>
+              </div>
+            )}
+            <button type="button" className="icon-button" onClick={toggleTheme} title="Cambiar tema">
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
           </div>
 
-          <button type="button" className="icon-button" onClick={toggleTheme} title="Cambiar tema">
-            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
+          <div className="topbar-row">
+            <div className="status-group">
+              <StatusBadge active={overview?.sync.isConnected ?? false} label="Jellyfin" />
+              <StatusBadge active={overview?.capabilities.tmdbConfigured ?? false} label="TMDB" />
+              <StatusBadge active={overview?.capabilities.assistantConfigured ?? false} label="IA" />
+            </div>
+          </div>
         </div>
       </header>
 

@@ -9,7 +9,7 @@ const initialMessages: ChatUiMessage[] = [
     role: "assistant",
     createdAt: new Date().toISOString(),
     content:
-      "Cuentame que te apetece ver y te recomendare peliculas o series con ficha visual y acceso directo a Jellyfin.",
+      "Bienvenido a tu cartelera. Cuentame que te apetece ver (genero, animo, duracion...) y te propondre peliculas o series de tu Jellyfin, con ficha y acceso directo para darle al play.",
     recommendations: [],
   },
 ];

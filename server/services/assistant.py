@@ -14,8 +14,10 @@ from server.services.tmdb_image import TmdbImageService
 
 try:
     from google import genai
+    from google.genai import types as genai_types
 except Exception:  # pragma: no cover - graceful degradation when dependency is missing
     genai = None
+    genai_types = None
 
 
 class AssistantService:
@@ -55,7 +57,9 @@ class AssistantService:
         pasted_content: list[dict[str, Any]],
     ) -> dict[str, Any]:
         overview = self.library_service.get_overview()
-        prompt_context = self.library_service.get_prompt_context(message)
+        prompt_context = self.library_service.get_prompt_context(
+            self._effective_query_for_context(message, history)
+        )
         audit = (
             self.audit_service.get_summary(self.library_service.get_series_items())
             if self._message_requires_audit(message)
@@ -155,6 +159,22 @@ class AssistantService:
             if inferred_genres:
                 return inferred_genres
         return []
+
+    def _effective_query_for_context(self, message: str, history: list[dict[str, Any]]) -> str:
+        """Fold in the last on-topic user turn when `message` alone has no
+        detectable genre/media type, so follow-ups ("dame otra", "mas series
+        asi") still resolve `prompt_context.relevantItems` against the right
+        subject instead of falling back to an unrelated generic sample.
+        """
+        if self.library_service.detect_genres_in_query(message) or self._detect_media_type(message):
+            return message
+        for entry in reversed(history):
+            if entry.get("role") != "user":
+                continue
+            prior = str(entry.get("content", ""))
+            if self.library_service.detect_genres_in_query(prior) or self._detect_media_type(prior):
+                return f"{prior} {message}".strip()
+        return message
 
     def _looks_like_follow_up(self, message: str) -> bool:
         normalized = self._normalize_text(message)
@@ -465,19 +485,34 @@ class AssistantService:
         prompt_context: dict[str, Any],
         audit: dict[str, Any],
     ) -> str:
-        prompt = self._build_prompt(
-            message=message,
-            history=history,
-            is_thinking_enabled=is_thinking_enabled,
-            files=files,
-            pasted_content=pasted_content,
-            overview=overview,
-            prompt_context=prompt_context,
-            audit=audit,
+        contents = self._history_to_contents(history)
+        contents.append(
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": self._build_turn_content(
+                            message=message,
+                            files=files,
+                            pasted_content=pasted_content,
+                            prompt_context=prompt_context,
+                            audit=audit,
+                        )
+                    }
+                ],
+            }
+        )
+        config = genai_types.GenerateContentConfig(
+            system_instruction=self._build_system_instruction(),
+            temperature=0.3,
+            max_output_tokens=1024,
+            thinking_config=genai_types.ThinkingConfig(
+                thinking_budget=-1 if is_thinking_enabled else 0
+            ),
         )
 
         try:
-            reply = self._client.models.generate_content(model=model, contents=prompt)
+            reply = self._client.models.generate_content(model=model, contents=contents, config=config)
             return (reply.text or "").strip() or "No pude generar una respuesta util."
         except Exception as exc:
             local_response = self._local_response(
@@ -495,40 +530,41 @@ class AssistantService:
                 return self._quota_exhausted_response(overview=overview, audit=audit)
             return self._unavailable_model_response(message=message, overview=overview)
 
-    def _build_prompt(
-        self,
-        *,
-        message: str,
-        history: list[dict[str, Any]],
-        is_thinking_enabled: bool,
-        files: list[dict[str, Any]],
-        pasted_content: list[dict[str, Any]],
-        overview: dict[str, Any],
-        prompt_context: dict[str, Any],
-        audit: dict[str, Any],
-    ) -> str:
-        trimmed_history = history[-8:]
+    def _history_to_contents(self, history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Turn stored chat history into native Gemini conversation turns
+        (role: user/model) instead of flattening it into descriptive text.
+        This is what lets multi-turn follow-ups stay coherent: the model
+        reads the actual prior dialogue rather than a JSON summary of it.
+        """
+        contents: list[dict[str, Any]] = []
+        for entry in history[-8:]:
+            text = str(entry.get("content", "")).strip()
+            if not text:
+                continue
+            role = "model" if entry.get("role") == "assistant" else "user"
+            contents.append({"role": role, "parts": [{"text": text}]})
+        return contents
+
+    def _build_system_instruction(self) -> str:
         memory_context = self.memory_service.get_context()
         memory_section = (
             f"\nMEMORIA DE SESIONES ANTERIORES:\n{memory_context}\n"
             if memory_context
             else ""
         )
-        thinking_rule = (
-            "Desarrolla el razonamiento paso a paso antes de responder cuando la consulta sea compleja."
-            if is_thinking_enabled
-            else "Respuestas directas y accionables. Sin introducciones, sin rodeos, sin resumen final."
-        )
         return f"""
 ROL Y AMBITO:
 Eres el asistente de biblioteca multimedia del servidor Jellyfin personal del usuario.
-Tu conocimiento se limita estrictamente a los datos del contexto suministrado en este prompt.
+Tu conocimiento se limita estrictamente a los datos de contexto suministrados en cada mensaje de esta conversacion.
 Responde siempre en espanol. Tono: directo, preciso, util. Sin relleno ni frases de cortesia innecesarias.
 {memory_section}
 INTEGRIDAD DE DATOS (prioridad maxima):
-- Usa exclusivamente titulos, generos, anos, valoraciones y temporadas que aparecen en el contexto.
-- Nunca inventes ni inferyas metadatos ausentes del contexto. Si un dato no esta disponible, omitelo.
+- Usa exclusivamente titulos, generos, anos, valoraciones y temporadas que aparecen en el contexto de cada mensaje.
+- Nunca inventes ni infieras metadatos ausentes del contexto. Si un dato no esta disponible, omitelo.
 - No uses expresiones de incertidumbre como "probablemente", "creo que" o "quiza".
+- Manten la coherencia con tus respuestas anteriores en esta misma conversacion; no contradigas ni repitas
+  sin motivo titulos que ya diste, y respeta el genero/tipo que se viene discutiendo si el mensaje actual
+  es una continuacion ("otra", "mas", "algo similar").
 
 FUERA DE AMBITO:
 Si la pregunta no tiene relacion con la biblioteca Jellyfin (noticias, recetas, codigo, cultura general, etc.),
@@ -600,31 +636,37 @@ SIN RESULTADO:
 Una frase clara indicando que no se encontro nada, seguida de una alternativa concreta
 (genero proximo, criterio mas amplio o tipo de contenido diferente disponible en el contexto).
 
-{thinking_rule}
-
----
-
-RESUMEN DE LA BIBLIOTECA:
-{json.dumps(overview, ensure_ascii=False, indent=2)}
-
-CONTEXTO RELEVANTE DE JELLYFIN:
-{json.dumps(prompt_context, ensure_ascii=False, indent=2)}
-
-AUDITORIA TMDB:
-{json.dumps(audit, ensure_ascii=False, indent=2)}
-
-ARCHIVOS ADJUNTOS:
-{json.dumps(files, ensure_ascii=False, indent=2)}
-
-CONTENIDO PEGADO:
-{json.dumps(pasted_content, ensure_ascii=False, indent=2)}
-
-HISTORIAL RECIENTE:
-{json.dumps(trimmed_history, ensure_ascii=False, indent=2)}
-
-CONSULTA DEL USUARIO:
-{message}
+FORMATO DE RESPUESTA:
+Sigue siempre el TIPO correspondiente al pie de la letra. Si necesitas razonar sobre los datos antes
+de responder, hazlo internamente: la respuesta visible debe contener unicamente el resultado final
+formateado, sin exponer el razonamiento paso a paso.
 """.strip()
+
+    def _build_turn_content(
+        self,
+        *,
+        message: str,
+        files: list[dict[str, Any]],
+        pasted_content: list[dict[str, Any]],
+        prompt_context: dict[str, Any],
+        audit: dict[str, Any],
+    ) -> str:
+        sections = [
+            "CONTEXTO RELEVANTE DE JELLYFIN (unica fuente de verdad para esta respuesta):",
+            json.dumps(prompt_context, ensure_ascii=False),
+        ]
+
+        if self._message_requires_audit(message):
+            sections += ["", "AUDITORIA TMDB:", json.dumps(audit, ensure_ascii=False)]
+
+        if files:
+            sections += ["", "ARCHIVOS ADJUNTOS:", json.dumps(files, ensure_ascii=False)]
+
+        if pasted_content:
+            sections += ["", "CONTENIDO PEGADO:", json.dumps(pasted_content, ensure_ascii=False)]
+
+        sections += ["", "CONSULTA DEL USUARIO:", message]
+        return "\n".join(sections)
 
     def _unavailable_model_response(self, *, message: str, overview: dict[str, Any]) -> str:
         stats = overview["stats"]

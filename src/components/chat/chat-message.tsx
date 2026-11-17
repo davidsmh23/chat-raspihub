@@ -14,7 +14,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   if (isAssistant) {
     return (
       <article className="message-row assistant">
-        <div className="message-label">Asistente</div>
+        <div className="message-label">Cartelera</div>
         <div className="message-bubble assistant">
           <div className="message-markdown">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>

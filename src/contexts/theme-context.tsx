@@ -10,7 +10,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "raspihub.theme";
+const STORAGE_KEY = "cartelera.theme";
 
 function getSystemTheme(): ThemeMode {
   if (typeof window === "undefined") return "dark";
